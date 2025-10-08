@@ -62,6 +62,7 @@ cd bit-to-vector/back-end
 ```bash
 conda env create -f env.yml
 conda activate bitvector
+conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
 ```
 
 ---
