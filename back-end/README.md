@@ -31,8 +31,7 @@ bit-to-vector/
 │   │   ├── main.py
 │   │   └── weights/                        # Pretrained ESRGAN weights
 │   │       └── RealESRGAN_x4plus_anime_6B.pth
-│   ├── env.yml                             # Conda environment file
-│   ├── install_vtracer.sh                  # Auto-installer for VTracer
+│   ├── setup_env.sh                             # Conda environment setup file
 │   ├── output/                             # Generated SVG files
 │   │   ├── 1_vectorized.svg
 │   │   ├── 2_vectorized.svg
@@ -60,45 +59,7 @@ cd bit-to-vector/back-end
 ### 2️⃣ Create the Conda Environment
 
 ```bash
-conda env create -f env.yml
-conda activate bitvector
-conda install pytorch torchvision torchaudio pytorch-cuda=11.7 -c pytorch -c nvidia
-```
-
----
-
-### 3️⃣ Install VTracer
-
-```bash
-chmod +x install_vtracer.sh
-./install_vtracer.sh
-```
-
-Then add Cargo binaries to your path:
-
-```bash
-echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.zshrc
-source ~/.zshrc
-```
-
-Verify installation:
-
-```bash
-vtracer --version
-```
-
----
-
-### 4️⃣ Download ESRGAN Weights
-
-Place your **ESRGAN model weights** inside:
-```
-back-end/app/weights/
-```
-
-Example:
-```
-RealESRGAN_x4plus_anime_6B.pth
+ chmod +x setup_env.sh && ./setup_env.sh
 ```
 
 ---
