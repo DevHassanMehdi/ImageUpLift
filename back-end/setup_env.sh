@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-ENV_NAME="bitvector"
+ENV_NAME="bitvector-test"
 PYTHON_VERSION="3.10"
 MODEL_URL="https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth"
 MODEL_DIR="app/weights"
