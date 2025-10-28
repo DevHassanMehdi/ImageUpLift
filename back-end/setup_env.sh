@@ -36,6 +36,8 @@ conda activate $ENV_NAME
 echo "⚙️ Installing core dependencies..."
 pip install --upgrade pip
 pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
+
+# ✅ Mac-friendly pip packages (no OpenCV GUI)
 # pip install basicsr==1.4.2 realesrgan opencv-python==4.8.1.78 numpy==1.26.4 scikit-image==0.25.2 scipy==1.15.3
 pip install basicsr==1.4.2 realesrgan opencv-python-headless "numpy>=1.24,<1.27" scikit-image==0.21.0 "scipy>=1.10,<1.11"
 # pip install fastapi==0.100.0 uvicorn==0.37.0 python-multipart==0.0.20 pydantic==1.10.13 loguru==0.7.3

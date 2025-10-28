@@ -1,11 +1,15 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
 
 const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001';
 
 export default function SettingsPanel({
-  settings, setSettings, canConvert, loading, file, setVectorSrc
+  settings, setSettings, canConvert, loading, setLoading, file, setVectorSrc
 }) {
   const set = (k, v) => setSettings({ ...settings, [k]: v });
+
+  // Default Outline slider values
+  const [outlineLow, setOutlineLow] = useState(100);
+  const [outlineHigh, setOutlineHigh] = useState(200);
 
   const handleConvert = async () => {
     if (!canConvert || loading) return;
@@ -15,6 +19,8 @@ export default function SettingsPanel({
     }
 
     try {
+      // ✅ Start loading spinner
+      setLoading(true);
       console.log("📡 Sending conversion request to:", `${API_BASE}/conversion/convert`);
 
       const fd = new FormData();
@@ -24,12 +30,20 @@ export default function SettingsPanel({
       fd.append("detail", settings.detail);
       fd.append("colorReduction", settings.colorReduction);
 
+      // 👇 Include Outline parameters
+      if (settings.outputType === "outline") {
+        fd.append("low", outlineLow);
+        fd.append("high", outlineHigh);
+      }
+
+      // 👇 No extra params needed for Enhance
+
       const response = await fetch(`${API_BASE}/conversion/convert`, {
         method: 'POST',
         mode: 'cors',
         body: fd,
         headers: {
-          'Accept': 'application/json, image/svg+xml, image/png',
+          'Accept': 'application/json, image/svg+xml, image/png, image/webp',
         }
       });
 
@@ -40,7 +54,11 @@ export default function SettingsPanel({
 
       const contentType = response.headers.get('content-type');
 
-      if (contentType?.includes('image/svg+xml') || contentType?.includes('image/png')) {
+      if (
+        contentType?.includes('image/svg+xml') ||
+        contentType?.includes('image/png') ||
+        contentType?.includes('image/webp')
+      ) {
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         console.log("✅ Image received:", url);
@@ -54,10 +72,15 @@ export default function SettingsPanel({
     } catch (error) {
       console.error('❌ Conversion failed:', error);
       alert('❌ Conversion failed. Check console for details.');
+    } finally {
+      // ✅ Stop spinner after processing
+      setLoading(false);
     }
   };
 
-  const showAdvancedSettings = settings.outputType === 'vector';
+  const showVectorSettings = settings.outputType === 'vector';
+  const showOutlineSettings = settings.outputType === 'outline';
+  const showEnhanceSettings = settings.outputType === 'enhance'; // 👈 Added flag
 
   return (
     <aside className="side">
@@ -69,7 +92,7 @@ export default function SettingsPanel({
         </div>
 
         <div className="group" style={{ marginTop: 8 }}>
-          {['vector', 'outline', 'Enhance'].map(k => (
+          {['vector', 'outline', 'enhance'].map(k => (
             <button
               key={k}
               className={`btn btn-ghost ${settings.outputType === k ? 'active' : ''}`}
@@ -81,7 +104,8 @@ export default function SettingsPanel({
         </div>
       </div>
 
-      {showAdvancedSettings && (
+      {/* --- Vector Mode Settings --- */}
+      {showVectorSettings && (
         <>
           <div className="section">
             <div className="kv"><span className="badge">Quality Level</span></div>
@@ -131,6 +155,52 @@ export default function SettingsPanel({
         </>
       )}
 
+      {/* --- Outline Mode Settings --- */}
+      {showOutlineSettings && (
+        <>
+          <div className="section">
+            <div className="kv">
+              <span className="badge">Low Threshold</span>
+              <span>{outlineLow}</span>
+            </div>
+            <input
+              type="range"
+              className="slider"
+              min="0"
+              max="255"
+              step="1"
+              value={outlineLow}
+              onChange={e => setOutlineLow(Number(e.target.value))}
+            />
+          </div>
+
+          <div className="section">
+            <div className="kv">
+              <span className="badge">High Threshold</span>
+              <span>{outlineHigh}</span>
+            </div>
+            <input
+              type="range"
+              className="slider"
+              min="0"
+              max="255"
+              step="1"
+              value={outlineHigh}
+              onChange={e => setOutlineHigh(Number(e.target.value))}
+            />
+          </div>
+        </>
+      )}
+
+      {/* --- Enhance Mode Info --- */}
+      {showEnhanceSettings && (
+        <div className="section">
+          {/* <p style={{ fontSize: 14, color: '#666' }}>
+            This mode uses Real-ESRGAN to upscale your image and enhance clarity.
+          </p> */}
+        </div>
+      )}
+
       <div className="hr" />
 
       <button
@@ -139,7 +209,7 @@ export default function SettingsPanel({
         disabled={!canConvert || loading || !file}
         onClick={handleConvert}
       >
-        {loading ? 'Converting…' : '🚀 Convert to Vector'}
+        {loading ? 'Converting…' : '🚀 Convert'}
       </button>
     </aside>
   );
