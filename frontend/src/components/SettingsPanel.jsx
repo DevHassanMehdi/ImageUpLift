@@ -7,7 +7,7 @@ export default function SettingsPanel({
 }) {
   const set = (k, v) => setSettings({ ...settings, [k]: v });
 
-  // Default Outline slider values
+  // Outline thresholds
   const [outlineLow, setOutlineLow] = useState(100);
   const [outlineHigh, setOutlineHigh] = useState(200);
 
@@ -19,24 +19,36 @@ export default function SettingsPanel({
     }
 
     try {
-      // ✅ Start loading spinner
       setLoading(true);
       console.log("📡 Sending conversion request to:", `${API_BASE}/conversion/convert`);
 
       const fd = new FormData();
       fd.append("file", file);
       fd.append("outputType", settings.outputType);
-      fd.append("quality", settings.quality);
-      fd.append("detail", settings.detail);
-      fd.append("colorReduction", settings.colorReduction);
 
-      // 👇 Include Outline parameters
+      // ✅ Vector mode params
+      if (settings.outputType === "vector") {
+        fd.append("hierarchical", settings.hierarchical);
+        fd.append("filter_speckle", settings.filterSpeckle);
+        fd.append("color_precision", settings.colorPrecision);
+        fd.append("gradient_step", settings.gradientStep);
+        if (settings.preset) fd.append("preset", settings.preset);
+        fd.append("mode", settings.mode);
+
+        if (settings.mode === "spline") {
+          fd.append("corner_threshold", settings.cornerThreshold);
+          fd.append("segment_length", settings.segmentLength);
+          fd.append("splice_threshold", settings.spliceThreshold);
+        }
+      }
+
+      // ✅ Outline mode params
       if (settings.outputType === "outline") {
         fd.append("low", outlineLow);
         fd.append("high", outlineHigh);
       }
 
-      // 👇 No extra params needed for Enhance
+      // Enhance mode has no extra params
 
       const response = await fetch(`${API_BASE}/conversion/convert`, {
         method: 'POST',
@@ -53,7 +65,6 @@ export default function SettingsPanel({
       }
 
       const contentType = response.headers.get('content-type');
-
       if (
         contentType?.includes('image/svg+xml') ||
         contentType?.includes('image/png') ||
@@ -62,8 +73,6 @@ export default function SettingsPanel({
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         console.log("✅ Image received:", url);
-
-        // ✅ Update preview on right panel
         setVectorSrc(url);
       } else {
         const json = await response.json();
@@ -73,24 +82,21 @@ export default function SettingsPanel({
       console.error('❌ Conversion failed:', error);
       alert('❌ Conversion failed. Check console for details.');
     } finally {
-      // ✅ Stop spinner after processing
       setLoading(false);
     }
   };
 
   const showVectorSettings = settings.outputType === 'vector';
   const showOutlineSettings = settings.outputType === 'outline';
-  const showEnhanceSettings = settings.outputType === 'enhance'; // 👈 Added flag
+  const showEnhanceSettings = settings.outputType === 'enhance';
 
   return (
     <aside className="side">
       <div className="section">
         <h3 style={{ margin: '4px 0 12px 0' }}>Conversion Settings</h3>
-
         <div className="kv">
           <span className="badge">Output Type</span>
         </div>
-
         <div className="group" style={{ marginTop: 8 }}>
           {['vector', 'outline', 'enhance'].map(k => (
             <button
@@ -104,54 +110,160 @@ export default function SettingsPanel({
         </div>
       </div>
 
-      {/* --- Vector Mode Settings --- */}
+      {/* --- Vector Mode Settings (Updated) --- */}
       {showVectorSettings && (
         <>
+          {/* Hierarchical */}
           <div className="section">
-            <div className="kv"><span className="badge">Quality Level</span></div>
+            <div className="kv"><span className="badge">Hierarchical</span></div>
             <div className="group" style={{ marginTop: 8 }}>
-              {['fast', 'balanced', 'high'].map(k => (
+              {['stacked', 'cutout'].map(k => (
                 <button
                   key={k}
-                  className={`btn btn-ghost ${settings.quality === k ? 'active' : ''}`}
-                  onClick={() => set('quality', k)}
-                >
-                  {k === 'high' ? 'High Quality' : k[0].toUpperCase() + k.slice(1)}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="section">
-            <div className="kv">
-              <span className="badge">Detail Level</span>
-              <span>{settings.detail}%</span>
-            </div>
-            <input
-              type="range"
-              className="slider"
-              min="0"
-              max="100"
-              step="1"
-              value={settings.detail}
-              onChange={e => set('detail', Number(e.target.value))}
-            />
-          </div>
-
-          <div className="section">
-            <div className="kv"><span className="badge">Color Reduction</span></div>
-            <div className="group" style={{ marginTop: 8 }}>
-              {['none', 'auto', 'aggressive'].map(k => (
-                <button
-                  key={k}
-                  className={`btn btn-ghost ${settings.colorReduction === k ? 'active' : ''}`}
-                  onClick={() => set('colorReduction', k)}
+                  className={`btn btn-ghost ${settings.hierarchical === k ? 'active' : ''}`}
+                  onClick={() => set('hierarchical', k)}
                 >
                   {k[0].toUpperCase() + k.slice(1)}
                 </button>
               ))}
             </div>
           </div>
+
+          {/* Filter Speckle */}
+          <div className="section">
+            <div className="kv">
+              <span className="badge">Filter Speckle</span>
+              <span>{settings.filterSpeckle}</span>
+            </div>
+            <input
+              type="range"
+              className="slider"
+              min="0"
+              max="128"
+              step="1"
+              value={settings.filterSpeckle}
+              onChange={e => set('filterSpeckle', Number(e.target.value))}
+            />
+          </div>
+
+          {/* Color Precision */}
+          <div className="section">
+            <div className="kv">
+              <span className="badge">Color Precision</span>
+              <span>{settings.colorPrecision}</span>
+            </div>
+            <input
+              type="range"
+              className="slider"
+              min="1"
+              max="8"
+              step="1"
+              value={settings.colorPrecision}
+              onChange={e => set('colorPrecision', Number(e.target.value))}
+            />
+          </div>
+
+          {/* Gradient Step */}
+          <div className="section">
+            <div className="kv">
+              <span className="badge">Gradient Step</span>
+              <span>{settings.gradientStep}</span>
+            </div>
+            <input
+              type="range"
+              className="slider"
+              min="1"
+              max="128"
+              step="1"
+              value={settings.gradientStep}
+              onChange={e => set('gradientStep', Number(e.target.value))}
+            />
+          </div>
+
+          {/* Preset */}
+          <div className="section">
+            <div className="kv"><span className="badge">Preset</span></div>
+            <div className="group" style={{ marginTop: 8 }}>
+              {['bw', 'poster', 'photo'].map(k => (
+                <button
+                  key={k}
+                  className={`btn btn-ghost ${settings.preset === k ? 'active' : ''}`}
+                  onClick={() => set('preset', settings.preset === k ? '' : k)}
+                >
+                  {k.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Mode */}
+          <div className="section">
+            <div className="kv"><span className="badge">Mode</span></div>
+            <div className="group" style={{ marginTop: 8 }}>
+              {['pixel', 'polygon', 'spline'].map(k => (
+                <button
+                  key={k}
+                  className={`btn btn-ghost ${settings.mode === k ? 'active' : ''}`}
+                  onClick={() => set('mode', k)}
+                >
+                  {k[0].toUpperCase() + k.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Spline-specific controls */}
+          {settings.mode === 'spline' && (
+            <>
+              <div className="section">
+                <div className="kv">
+                  <span className="badge">Corner Threshold</span>
+                  <span>{settings.cornerThreshold}</span>
+                </div>
+                <input
+                  type="range"
+                  className="slider"
+                  min="0"
+                  max="180"
+                  step="1"
+                  value={settings.cornerThreshold}
+                  onChange={e => set('cornerThreshold', Number(e.target.value))}
+                />
+              </div>
+
+              <div className="section">
+                <div className="kv">
+                  <span className="badge">Segment Length</span>
+                  <span>{settings.segmentLength}</span>
+                </div>
+                <input
+                  type="range"
+                  className="slider"
+                  min="1"
+                  max="10"
+                  step="1"
+                  value={settings.segmentLength}
+                  onChange={e => set('segmentLength', Number(e.target.value))}
+                />
+              </div>
+
+              <div className="section">
+                <div className="kv">
+                  <span className="badge">Splice Threshold</span>
+                  <span>{settings.spliceThreshold}</span>
+                </div>
+                <input
+                  type="range"
+                  className="slider"
+                  min="0"
+                  max="180"
+                  step="1"
+                  value={settings.spliceThreshold}
+                  onChange={e => set('spliceThreshold', Number(e.target.value))}
+                />
+              </div>
+            </>
+          )}
         </>
       )}
 
@@ -192,12 +304,12 @@ export default function SettingsPanel({
         </>
       )}
 
-      {/* --- Enhance Mode Info --- */}
+      {/* --- Enhance Mode --- */}
       {showEnhanceSettings && (
         <div className="section">
-          {/* <p style={{ fontSize: 14, color: '#666' }}>
-            This mode uses Real-ESRGAN to upscale your image and enhance clarity.
-          </p> */}
+          <p style={{ fontSize: 14, color: '#666' }}>
+            This mode uses Real-ESRGAN to upscale and enhance your image.
+          </p>
         </div>
       )}
 

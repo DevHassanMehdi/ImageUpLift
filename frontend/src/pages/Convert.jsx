@@ -15,11 +15,18 @@ export default function Convert() {
   const [lastTimeSec, setLastTimeSec] = useState(0);
 
   const [settings, setSettings] = useState({
-    outputType: 'vector',    // 'vector' | 'outline' | 'enhance'
-    quality: 'balanced',     // 'fast' | 'balanced' | 'high'
-    detail: 75,              // 0..100
-    colorReduction: 'auto'   // 'none' | 'auto' | 'aggressive'
+    outputType: 'vector',
+    hierarchical: 'stacked',
+    filterSpeckle: 2,
+    colorPrecision: 8,
+    gradientStep: 16,
+    preset: '',
+    mode: 'polygon',
+    cornerThreshold: 60,
+    segmentLength: 4,
+    spliceThreshold: 45
   });
+  
 
   // Generate local preview for the uploaded file
   useEffect(() => {

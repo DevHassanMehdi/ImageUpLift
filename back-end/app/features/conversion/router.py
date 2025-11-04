@@ -17,15 +17,28 @@ def get_conversion_info():
 async def options_convert():
     return JSONResponse({"message": "CORS preflight OK"}, status_code=200)
 
+
 @router.post("/convert")
 async def convert_image(
     file: UploadFile = File(...),
     outputType: str = Form("vector"),  # 'vector', 'outline', 'enhance'
+    # legacy fields (ignored for vector now)
     quality: str = Form("balanced"),
     detail: int = Form(75),
     colorReduction: str = Form("auto"),
+    # outline fields
     low: int = Form(100),
-    high: int = Form(200)
+    high: int = Form(200),
+    # new vector fields
+    hierarchical: str = Form("stacked"),
+    filter_speckle: int = Form(2),
+    color_precision: int = Form(12),
+    gradient_step: int = Form(16),
+    preset: str = Form(None),
+    mode: str = Form("polygon"),
+    corner_threshold: int = Form(60),
+    segment_length: int = Form(4),
+    splice_threshold: int = Form(45)
 ):
     """
     Receives image + conversion settings and runs the correct pipeline.
@@ -41,36 +54,56 @@ async def convert_image(
 
         # ✅ VECTOR mode
         if outputType.lower() == "vector":
-            class Args:
-                input = tmp_path
-                output = output_dir
-                model_path = "app/weights/RealESRGAN_x4plus_anime_6B.pth"
-                scale = 4
-                quality_threshold = 5500.0
-                mode = "spline"
-                color_precision = 6
-                filter_speckle = 16
-                hierarchical = "stacked"
-                corner_threshold = 40
-                gradient_step = 60
-                segment_length = 10
-                splice_threshold = 80
-                path_precision = 1
+            print("🟦 Starting vectorization with new parameters...")
 
-            args = Args()
-            process_image(tmp_path, args, device)
+            # Build command for subprocess call to vectorization.py
+            cmd = [
+                "python",
+                "app/features/conversion/vectorization.py",
+                "--input", tmp_path,
+                "--output", output_dir,
+                "--hierarchical", hierarchical,
+                "--filter_speckle", str(filter_speckle),
+                "--color_precision", str(color_precision),
+                "--gradient_step", str(gradient_step),
+                "--mode", mode,
+            ]
 
+            if preset:
+                cmd.extend(["--preset", preset])
+
+            if mode == "spline":
+                cmd.extend([
+                    "--corner_threshold", str(corner_threshold),
+                    "--segment_length", str(segment_length),
+                    "--splice_threshold", str(splice_threshold),
+                ])
+
+            print("📦 Running vectorization command:", " ".join(cmd))
+
+            try:
+                subprocess.run(cmd, check=True)
+            except subprocess.CalledProcessError as e:
+                return JSONResponse(
+                    status_code=500,
+                    content={"error": "Vectorization process failed", "details": str(e)},
+                )
+
+            # Retrieve the latest .svg file
             svg_files = sorted(
                 [f for f in os.listdir(output_dir) if f.endswith(".svg")],
                 key=lambda f: os.path.getmtime(os.path.join(output_dir, f)),
-                reverse=True
+                reverse=True,
             )
             if not svg_files:
                 raise RuntimeError("No SVG output generated.")
-            return FileResponse(os.path.join(output_dir, svg_files[0]), media_type="image/svg+xml")
+            latest_svg = os.path.join(output_dir, svg_files[0])
+            print(f"✅ Vectorization completed: {latest_svg}")
+            return FileResponse(latest_svg, media_type="image/svg+xml")
 
         # ✅ OUTLINE mode
         elif outputType.lower() == "outline":
+            print("🟨 Starting outline vectorization...")
             try:
                 outline_process(tmp_path, output_dir, low, high)
             except FileNotFoundError:
@@ -87,20 +120,23 @@ async def convert_image(
             svg_files = sorted(
                 [f for f in os.listdir(output_dir) if f.endswith("_outline.svg")],
                 key=lambda f: os.path.getmtime(os.path.join(output_dir, f)),
-                reverse=True
+                reverse=True,
             )
             if not svg_files:
                 raise RuntimeError("No outline SVG output generated.")
-            return FileResponse(os.path.join(output_dir, svg_files[0]), media_type="image/svg+xml")
+            latest_svg = os.path.join(output_dir, svg_files[0])
+            print(f"✅ Outline conversion completed: {latest_svg}")
+            return FileResponse(latest_svg, media_type="image/svg+xml")
 
         # ✅ ENHANCE mode
         elif outputType.lower() == "enhance":
-            # Prepare CLI args for your RealESRGAN-based script
+            print("🟢 Starting image enhancement...")
             args = [
-                "python", "app/features/conversion/enhance.py",
+                "python",
+                "app/features/conversion/enhance.py",
                 "--input", tmp_path,
                 "--output", output_dir,
-                "--model_path", "app/weights/RealESRGAN_x4plus.pth"
+                "--model_path", "app/weights/RealESRGAN_x4plus.pth",
             ]
 
             try:
@@ -111,22 +147,28 @@ async def convert_image(
                     content={"error": "Enhance process failed", "details": str(e)},
                 )
 
-            # Return the latest upscaled image
             upscaled_files = sorted(
-                [f for f in os.listdir(output_dir) if f.endswith("_real_upscaled.png") or f.endswith("_real_upscaled.webp")],
+                [
+                    f
+                    for f in os.listdir(output_dir)
+                    if f.endswith("_real_upscaled.png")
+                    or f.endswith("_real_upscaled.webp")
+                ],
                 key=lambda f: os.path.getmtime(os.path.join(output_dir, f)),
-                reverse=True
+                reverse=True,
             )
             if not upscaled_files:
                 raise RuntimeError("No upscaled image found.")
             latest = os.path.join(output_dir, upscaled_files[0])
             media_type = "image/webp" if latest.endswith(".webp") else "image/png"
+            print(f"✅ Enhancement completed: {latest}")
             return FileResponse(latest, media_type=media_type)
 
         else:
             return JSONResponse(status_code=400, content={"error": f"Unsupported outputType: {outputType}"})
 
     except Exception as e:
+        print("❌ Conversion failed:", e)
         return JSONResponse(status_code=500, content={"error": str(e)})
 
     finally:
