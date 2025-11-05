@@ -17,14 +17,14 @@ export default function Convert() {
   const [settings, setSettings] = useState({
     outputType: 'vector',
     hierarchical: 'stacked',
-    filterSpeckle: 2,
-    colorPrecision: 8,
-    gradientStep: 16,
+    filterSpeckle: 16,
+    colorPrecision: 6,
+    gradientStep: 60,
     preset: '',
-    mode: 'polygon',
-    cornerThreshold: 60,
-    segmentLength: 4,
-    spliceThreshold: 45
+    mode: 'spline',
+    cornerThreshold: 40,
+    segmentLength: 10,
+    spliceThreshold: 80
   });
   
 

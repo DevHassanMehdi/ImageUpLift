@@ -31,14 +31,14 @@ async def convert_image(
     high: int = Form(200),
     # new vector fields
     hierarchical: str = Form("stacked"),
-    filter_speckle: int = Form(2),
-    color_precision: int = Form(12),
-    gradient_step: int = Form(16),
+    filter_speckle: int = Form(16),
+    color_precision: int = Form(6),
+    gradient_step: int = Form(60),
     preset: str = Form(None),
-    mode: str = Form("polygon"),
-    corner_threshold: int = Form(60),
-    segment_length: int = Form(4),
-    splice_threshold: int = Form(45)
+    mode: str = Form("spline"),
+    corner_threshold: int = Form(40),
+    segment_length: int = Form(10),
+    splice_threshold: int = Form(80)
 ):
     """
     Receives image + conversion settings and runs the correct pipeline.
