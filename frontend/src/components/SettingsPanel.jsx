@@ -139,7 +139,7 @@ export default function SettingsPanel({
               type="range"
               className="slider"
               min="0"
-              max="128"
+              max="16"
               step="1"
               value={settings.filterSpeckle}
               onChange={e => set('filterSpeckle', Number(e.target.value))}
