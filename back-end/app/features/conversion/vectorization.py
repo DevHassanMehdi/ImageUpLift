@@ -8,19 +8,16 @@ from shutil import which
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from realesrgan import RealESRGANer
 
-
 # ---------- helpers ----------
 def ensure_vtracer():
     if which("vtracer") is None:
         raise RuntimeError("vtracer not found in PATH. Install it (e.g., `cargo install vtracer`).")
-
 
 def measure_image_quality(image_path: str) -> float:
     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
     if img is None:
         raise FileNotFoundError(f"Image not found: {image_path}")
     return cv2.Laplacian(img, cv2.CV_64F).var()
-
 
 def safe_svg_path(output_dir: str, base_name: str) -> str:
     os.makedirs(output_dir, exist_ok=True)
@@ -33,7 +30,6 @@ def safe_svg_path(output_dir: str, base_name: str) -> str:
         if not os.path.exists(candidate_i):
             return candidate_i
         i += 1
-
 
 # ---------- ESRGAN upscaling ----------
 def upscale_image(input_path: str, model_path: str, scale: int, device: str):
@@ -55,7 +51,6 @@ def upscale_image(input_path: str, model_path: str, scale: int, device: str):
     out, _ = upsampler.enhance(img, outscale=scale)
     return out
 
-
 # ---------- VTracer wrapper ----------
 def vectorize_to_svg(raster_path: str, svg_path: str, args):
     cmd = [
@@ -63,32 +58,16 @@ def vectorize_to_svg(raster_path: str, svg_path: str, args):
         "--input", raster_path,
         "--output", svg_path,
         "--mode", args.mode,
-        "--hierarchical", args.hierarchical,
-        "--filter_speckle", str(args.filter_speckle),
         "--color_precision", str(args.color_precision),
-    ]
-
-    # Optional preset
-    if args.preset:
-        cmd.extend(["--preset", args.preset])
-
-    # Spline-only parameters
-    if args.mode == "spline":
-        cmd.extend([
-            "--corner_threshold", str(args.corner_threshold),
-            "--segment_length", str(args.segment_length),
-            "--splice_threshold", str(args.splice_threshold),
-        ])
-
-    # Always include remaining optional params
-    cmd.extend([
+        "--filter_speckle", str(args.filter_speckle),
+        "--hierarchical", args.hierarchical,
+        "--corner_threshold", str(args.corner_threshold),
         "--gradient_step", str(args.gradient_step),
+        "--segment_length", str(args.segment_length),
+        "--splice_threshold", str(args.splice_threshold),
         "--path_precision", str(args.path_precision),
-    ])
-
-    print("🧩 Running VTracer:", " ".join(cmd))
+    ]
     subprocess.run(cmd, check=True)
-
 
 # ---------- per-image pipeline ----------
 def process_image(image_path: str, args, device: str):
@@ -114,44 +93,31 @@ def process_image(image_path: str, args, device: str):
         print("→ vectorize (no upscale)")
         vectorize_to_svg(image_path, target_svg, args)
 
-
 # ---------- main ----------
 def main():
     parser = argparse.ArgumentParser(description="Bitmap → (optional ESRGAN) → VTracer (SVG)")
     parser.add_argument("--input", required=True, help="Image file or folder")
-    parser.add_argument("--model_path", required=False,
-                        default="app/weights/RealESRGAN_x4plus_anime_6B.pth",
-                        help="Path to Real-ESRGAN .pth model")
+    parser.add_argument("--model_path", required=False, default="app/weights/RealESRGAN_x4plus_anime_6B.pth", help="Path to Real-ESRGAN .pth model")
     parser.add_argument("--output", default="output", help="Output directory for SVGs")
     parser.add_argument("--scale", type=int, default=4, help="Upscale factor (default: 4)")
-    parser.add_argument("--quality_threshold", type=float, default=5500.0,
-                        help="Laplacian variance threshold")
+    parser.add_argument("--quality_threshold", type=float, default=5500.0, help="Laplacian variance threshold")
 
-    # 🧠 VTracer parameters (updated)
-    parser.add_argument("--mode", default="polygon", choices=["pixel", "polygon", "spline"],
-                        help="Vectorization mode")
-    parser.add_argument("--hierarchical", type=str, default="stacked",
-                        choices=["stacked", "cutout"], help="Hierarchical clustering mode")
-    parser.add_argument("--filter_speckle", type=int, default=2,
-                        help="Filter out small speckles below this size (px)")
-    parser.add_argument("--color_precision", type=int, default=12,
-                        help="Number of significant bits for color precision")
-    parser.add_argument("--gradient_step", type=int, default=16,
-                        help="Gradient step size (frontend slider)")
-    parser.add_argument("--preset", type=str, choices=["bw", "poster", "photo"],
-                        help="Optional preset configuration")
-    # Spline mode parameters
-    parser.add_argument("--corner_threshold", type=int, default=60)
-    parser.add_argument("--segment_length", type=int, default=4)
-    parser.add_argument("--splice_threshold", type=int, default=45)
+    # VTracer defaults (your tuned values)
+    parser.add_argument("--mode", default="spline", choices=["polygon", "spline", "pixel"])
+    parser.add_argument("--color_precision", type=int, default=6)
+    parser.add_argument("--filter_speckle", type=int, default=16)
+    parser.add_argument("--hierarchical", default="stacked", choices=["stacked", "cutout"])
+    parser.add_argument("--corner_threshold", type=int, default=40)
+    parser.add_argument("--gradient_step", type=int, default=60)
+    parser.add_argument("--segment_length", type=int, default=10)
+    parser.add_argument("--splice_threshold", type=int, default=80)
     parser.add_argument("--path_precision", type=int, default=1)
 
     args = parser.parse_args()
     ensure_vtracer()
 
-    # Model check only if ESRGAN is used
-    if args.model_path and not os.path.isfile(args.model_path):
-        print(f"⚠️ Warning: ESRGAN model not found at {args.model_path}. Skipping upscale.")
+    if not os.path.isfile(args.model_path):
+        raise FileNotFoundError(f"ESRGAN model not found: {args.model_path}")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"🧠 Using device: {device}")
@@ -159,8 +125,7 @@ def main():
 
     valid_exts = (".png", ".jpg", ".jpeg", ".bmp", ".webp", ".tif", ".tiff")
     if os.path.isdir(args.input):
-        images = [os.path.join(args.input, f) for f in os.listdir(args.input)
-                  if f.lower().endswith(valid_exts)]
+        images = [os.path.join(args.input, f) for f in os.listdir(args.input) if f.lower().endswith(valid_exts)]
         if not images:
             print("No valid images found in folder.")
             return
@@ -173,6 +138,6 @@ def main():
 
     print("✅ All conversions complete.")
 
-
 if __name__ == "__main__":
     main()
+    
