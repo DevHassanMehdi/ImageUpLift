@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 const clamp = (v, min, max) => Math.min(max, Math.max(min, v));
 
@@ -13,6 +13,7 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
   const offsetStart = useRef({ x: 0, y: 0 });
   const [dimsOriginal, setDimsOriginal] = useState(null);
   const [dimsVector, setDimsVector] = useState(null);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     setZoom(1);
@@ -36,6 +37,26 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
 
   const baseDims = dimsOriginal || dimsVector;
 
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    const el = canvasRef.current;
+    const updateSize = () => {
+      const rect = el.getBoundingClientRect();
+      setCanvasSize({ width: rect.width, height: rect.height });
+    };
+    updateSize();
+    const observer = new ResizeObserver(updateSize);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const fitScale = useMemo(() => {
+    if (!canvasSize.width || !canvasSize.height || !baseDims) return 1;
+    const ratioW = canvasSize.width / Math.max(baseDims.width, 1);
+    const ratioH = canvasSize.height / Math.max(baseDims.height, 1);
+    return Math.min(ratioW, ratioH);
+  }, [canvasSize, baseDims]);
+
   const scaleFor = (isOriginal) => {
     const dims = isOriginal ? dimsOriginal : dimsVector;
     if (!baseDims || !dims) return 1;
@@ -54,7 +75,7 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
 
   const applyZoom = (delta, evt) => {
     const rect = canvasRef.current?.getBoundingClientRect();
-    const minZoom = 1;
+    const minZoom = 0.25;
     const maxZoom = 8;
     const step = 0.12;
     const next = clamp(zoom + delta * step, minZoom, maxZoom);
@@ -130,7 +151,7 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
   });
 
   const styledImage = (isOriginal) => {
-    const s = scaleFor(isOriginal) * zoom;
+    const s = scaleFor(isOriginal) * fitScale * zoom;
     return {
       position: "absolute",
       top: "50%",
