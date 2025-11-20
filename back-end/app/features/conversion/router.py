@@ -4,6 +4,7 @@ import tempfile, os, torch, subprocess
 from app.features.conversion.vectorization import process_image
 from app.features.conversion.outline import process_image as outline_process
 from app.features.conversion.enhance import main as enhance_main  # 👈 import your enhance script
+from app.features.helpers.recommend_settings import extract_image_metadata, recommend_conversion
 
 router = APIRouter(prefix="/conversion", tags=["Conversion"])
 
@@ -16,6 +17,42 @@ def get_conversion_info():
 @router.options("/convert")
 async def options_convert():
     return JSONResponse({"message": "CORS preflight OK"}, status_code=200)
+
+@router.post("/recommend")
+async def recommend_settings(file: UploadFile = File(...)):
+    """
+    Accepts an image file, extracts metadata, and returns
+    recommended conversion settings (vector, outline, and mode).
+    """
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
+        tmp.write(await file.read())
+        tmp_path = tmp.name
+
+    try:
+        # 1. Extract metadata
+        metadata = extract_image_metadata(tmp_path)
+
+        # 2. Get recommendation (vector + outline + mode)
+        recommendation = recommend_conversion(metadata)
+
+        # 3. Build response
+        result = {
+            "metadata": metadata,
+            "recommendation": recommendation
+        }
+
+        return JSONResponse(result)
+
+    except Exception as e:
+        print("❌ Recommendation failed:", e)
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Failed to compute recommendation", "details": str(e)}
+        )
+
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
 
 
 @router.post("/convert")

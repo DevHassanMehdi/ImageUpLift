@@ -11,8 +11,11 @@ export default function Convert() {
   const [originalSrc, setOriginalSrc] = useState('');
   const [vectorSrc, setVectorSrc] = useState('');
   const [loading, setLoading] = useState(false);
+  const [recommending, setRecommending] = useState(false);
   const [imagesConverted, setImagesConverted] = useState(0);
   const [lastTimeSec, setLastTimeSec] = useState(0);
+  const [outlineLow, setOutlineLow] = useState(100);
+  const [outlineHigh, setOutlineHigh] = useState(200);
 
   const [settings, setSettings] = useState({
     outputType: 'vector',
@@ -26,12 +29,14 @@ export default function Convert() {
     segmentLength: 10,
     spliceThreshold: 80
   });
-  
 
   // Generate local preview for the uploaded file
   useEffect(() => {
     if (!file) {
       setOriginalSrc('');
+      setVectorSrc('');
+      setOutlineLow(100);
+      setOutlineHigh(200);
       return;
     }
     const url = URL.createObjectURL(file);
@@ -39,9 +44,65 @@ export default function Convert() {
     return () => URL.revokeObjectURL(url);
   }, [file]);
 
-  const canConvert = !!file && !loading;
+  // Fetch recommendation when the file changes
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      if (!file) return;
+      setRecommending(true);
+      try {
+        const fd = new FormData();
+        fd.append('file', file);
+        const res = await fetch(`${API_BASE}/conversion/recommend`, {
+          method: 'POST',
+          mode: 'cors',
+          body: fd,
+          headers: { Accept: 'application/json' }
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error(`Recommend failed: ${res.status} ${errText}`);
+        }
+        const json = await res.json();
+        if (cancelled) return;
 
-  // ✅ Clears both previews and resets file
+        const rec = json.recommendation || {};
+        const vector = rec.vector_settings || {};
+        const outline = rec.outline_settings || {};
+        const nextOutput = rec.conversion_mode || settings.outputType;
+
+        setSettings(prev => ({
+          ...prev,
+          outputType: nextOutput,
+          hierarchical: vector.hierarchical ?? prev.hierarchical,
+          filterSpeckle: Number(vector.filter_speckle ?? prev.filterSpeckle),
+          colorPrecision: Number(vector.color_precision ?? prev.colorPrecision),
+          gradientStep: Number(vector.gradient_step ?? prev.gradientStep),
+          preset: vector.preset ?? prev.preset ?? '',
+          mode: vector.mode ?? prev.mode,
+          cornerThreshold: Number(vector.corner_threshold ?? prev.cornerThreshold),
+          segmentLength: Number(vector.segment_length ?? prev.segmentLength),
+          spliceThreshold: Number(vector.splice_threshold ?? prev.spliceThreshold)
+        }));
+
+        if (outline.low !== undefined) setOutlineLow(Number(outline.low));
+        if (outline.high !== undefined) setOutlineHigh(Number(outline.high));
+      } catch (err) {
+        console.error('Recommend request failed:', err);
+      } finally {
+        if (!cancelled) setRecommending(false);
+      }
+    };
+    run();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [file]);
+
+  const canConvert = !!file && !loading && !recommending;
+
+  // �o. Clears both previews and resets file
   const handleClear = () => {
     setFile(null);
     setOriginalSrc('');
@@ -61,7 +122,7 @@ export default function Convert() {
             originalSrc={originalSrc}
             vectorSrc={vectorSrc}
             processing={loading}
-            onClear={handleClear} // ✅ pass clear function to PreviewPane
+            onClear={handleClear} // �o. pass clear function to PreviewPane
           />
         </div>
       </div>
@@ -76,6 +137,11 @@ export default function Convert() {
           setLoading={setLoading}
           file={file}
           setVectorSrc={setVectorSrc}
+          recommending={recommending}
+          outlineLow={outlineLow}
+          outlineHigh={outlineHigh}
+          setOutlineLow={setOutlineLow}
+          setOutlineHigh={setOutlineHigh}
         />
         <StatsCard count={imagesConverted} lastTimeSec={lastTimeSec} />
       </div>
