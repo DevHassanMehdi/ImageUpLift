@@ -47,12 +47,11 @@ def get_dominant_colors(pil_img, top=5):
 def estimate_edge_complexity(img_cv):
     gray = cv2.cvtColor(img_cv, cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(gray, 80, 160)
-    edge_count = int(np.count_nonzero(edges))
-    return edge_count
+    return int(np.count_nonzero(edges))
 
 
 # -----------------------
-# CLIP-based image type
+# CLIP-based classification
 # -----------------------
 
 _CLIP_MODEL = None
@@ -157,7 +156,7 @@ def extract_image_metadata(image_path):
 
 
 # -----------------------
-# Default Settings
+# Default settings
 # -----------------------
 
 DEFAULT_VECTOR_SETTINGS = {
@@ -174,15 +173,24 @@ DEFAULT_VECTOR_SETTINGS = {
     "quality_threshold": 5500,
 }
 
+DEFAULT_OUTLINE_SETTINGS = {
+    "low": 100,
+    "high": 200
+}
+
+
+# -----------------------
+# Vector recommendation
+# -----------------------
 
 def recommend_vector_settings(metadata):
     settings = DEFAULT_VECTOR_SETTINGS.copy()
 
     color_count = metadata["color_count"]
     edge_complexity = metadata["edge_complexity"]
+
     w, h = metadata["width"], metadata["height"]
-    total_pixels = w * h
-    edge_density = edge_complexity / max(total_pixels, 1)
+    edge_density = edge_complexity / max((w * h), 1)
 
     # Small color palette → adjust slightly
     if color_count < 64:
@@ -190,12 +198,12 @@ def recommend_vector_settings(metadata):
     elif color_count > 4000:
         settings["color_precision"] = min(8, settings["color_precision"] + 1)
 
-    # Many edges → boost curve fidelity
+    # High edges → boost fidelity
     if edge_density > 0.03:
         settings["path_precision"] = min(5, settings["path_precision"] + 2)
         settings["corner_threshold"] = min(80, settings["corner_threshold"] + 10)
 
-    # Simple logos → reduce speckle filtering
+    # Simple logos → reduce speckle filter
     if color_count < 64 and edge_density < 0.02:
         settings["filter_speckle"] = max(0, settings["filter_speckle"] - 8)
 
@@ -203,34 +211,55 @@ def recommend_vector_settings(metadata):
 
 
 # -----------------------
-# Recommendation Logic
+# Outline Recommendation
+# -----------------------
+
+def recommend_outline_settings(metadata):
+    edge_complexity = metadata["edge_complexity"]
+    w, h = metadata["width"], metadata["height"]
+    edge_density = edge_complexity / max(w * h, 1)
+
+    # Default
+    low, high = 100, 200
+
+    # Only adjust if NOT a photo
+    if metadata["ai_image_type"] != "photo":
+        if edge_density < 0.01:
+            low, high = 10, 40
+        elif edge_density < 0.03:
+            low, high = 80, 180
+        else:
+            low, high = 120, 240
+
+    return {"low": int(low), "high": int(high)}
+
+
+# -----------------------
+# Final recommendation logic
 # -----------------------
 
 def recommend_conversion(metadata):
     ai_type = metadata["ai_image_type"]
 
-    # Default recommendation
-    conversion_mode = "vector"
-
+    # Mode decision
     if ai_type == "photo":
         conversion_mode = "enhance"
-
-    # Vector settings:
-    # ✔ For photos: use DEFAULT settings
-    # ✔ For graphics: use minimal adjusted settings
-    if ai_type == "photo":
         vector_settings = DEFAULT_VECTOR_SETTINGS.copy()
+        outline_settings = DEFAULT_OUTLINE_SETTINGS.copy()
     else:
+        conversion_mode = "vector"
         vector_settings = recommend_vector_settings(metadata)
+        outline_settings = recommend_outline_settings(metadata)
 
     return {
         "conversion_mode": conversion_mode,
-        "vector_settings": vector_settings
+        "vector_settings": vector_settings,
+        "outline_settings": outline_settings
     }
 
 
 # -----------------------
-# Main CLI
+# Main
 # -----------------------
 
 def main():
