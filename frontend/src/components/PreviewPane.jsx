@@ -135,7 +135,7 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
       position: "absolute",
       top: "50%",
       left: "50%",
-      transform: `translate(-50%, -50%) translate(${offset.x / s}px, ${offset.y / s}px) scale(${s})`,
+      transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px) scale(${s})`,
       transformOrigin: "center center",
       transition: isPanning || isDividing ? "none" : "transform 0.12s ease",
       pointerEvents: "none",
