@@ -4,6 +4,7 @@ import PreviewPane from '../components/PreviewPane';
 import SettingsPanel from '../components/SettingsPanel';
 import StatsCard from '../components/StatsCard';
 import ImageInsights from '../components/ImageInsights';
+import Toasts from '../components/Toast';
 
 const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001';
 
@@ -19,6 +20,7 @@ export default function Convert() {
   const [outlineHigh, setOutlineHigh] = useState(200);
   const [metadata, setMetadata] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
+  const [toasts, setToasts] = useState([]);
 
   const [settings, setSettings] = useState({
     outputType: 'vector',
@@ -77,6 +79,7 @@ export default function Convert() {
         const nextOutput = rec.conversion_mode || settings.outputType;
         setMetadata(json.metadata || null);
         setRecommendation(rec || null);
+        addToast('Settings updated from analysis', 'success', 2000);
 
         setSettings(prev => ({
           ...prev,
@@ -96,6 +99,7 @@ export default function Convert() {
         if (outline.high !== undefined) setOutlineHigh(Number(outline.high));
       } catch (err) {
         console.error('Recommend request failed:', err);
+        addToast('Failed to fetch recommendation', 'error');
       } finally {
         if (!cancelled) setRecommending(false);
       }
@@ -116,6 +120,16 @@ export default function Convert() {
     setVectorSrc('');
     setMetadata(null);
     setRecommendation(null);
+    addToast('Cleared image and previews', 'info', 1800);
+  };
+
+  const addToast = (message, type = 'info', duration = 3500) => {
+    const id = (window.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2));
+    setToasts(prev => [...prev, { id, message, type, duration }]);
+  };
+
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
   };
 
   return (
@@ -151,10 +165,12 @@ export default function Convert() {
           outlineHigh={outlineHigh}
           setOutlineLow={setOutlineLow}
           setOutlineHigh={setOutlineHigh}
+          notify={addToast}
         />
         <StatsCard count={imagesConverted} lastTimeSec={lastTimeSec} />
         <ImageInsights metadata={metadata} recommendation={recommendation} />
       </div>
+      <Toasts toasts={toasts} removeToast={removeToast} />
     </div>
   );
 }

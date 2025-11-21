@@ -12,7 +12,8 @@ export default function SettingsPanel({
   outlineLow,
   outlineHigh,
   setOutlineLow,
-  setOutlineHigh
+  setOutlineHigh,
+  notify
 }) {
   const set = (k, v) => setSettings({ ...settings, [k]: v });
 
@@ -77,13 +78,14 @@ export default function SettingsPanel({
         const url = URL.createObjectURL(blob);
         console.log("Image received:", url);
         setVectorSrc(url);
+        notify?.('Conversion completed', 'success');
       } else {
         const json = await response.json();
-        alert(`Conversion successful: ${json.message || JSON.stringify(json)}`);
+        notify?.(`Conversion successful: ${json.message || 'done'}`, 'success');
       }
     } catch (error) {
       console.error('Conversion failed:', error);
-      alert('Conversion failed. Check console for details.');
+      notify?.('Conversion failed. Check console for details.', 'error');
     } finally {
       setLoading(false);
     }
