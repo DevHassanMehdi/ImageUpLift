@@ -4,6 +4,7 @@ import cv2
 import subprocess
 import tempfile
 import torch
+from datetime import datetime
 from shutil import which
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from realesrgan import RealESRGANer
@@ -20,16 +21,15 @@ def measure_image_quality(image_path: str) -> float:
     return cv2.Laplacian(img, cv2.CV_64F).var()
 
 def safe_svg_path(output_dir: str, base_name: str) -> str:
+    """Return a unique SVG path with timestamp to avoid collisions."""
     os.makedirs(output_dir, exist_ok=True)
-    candidate = os.path.join(output_dir, f"{base_name}_vectorized.svg")
-    if not os.path.exists(candidate):
-        return candidate
+    ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S-%f")
+    candidate = os.path.join(output_dir, f"{base_name}_vectorized_{ts}.svg")
     i = 1
-    while True:
-        candidate_i = os.path.join(output_dir, f"{base_name}_vectorized_{i}.svg")
-        if not os.path.exists(candidate_i):
-            return candidate_i
+    while os.path.exists(candidate):
+        candidate = os.path.join(output_dir, f"{base_name}_vectorized_{ts}_{i}.svg")
         i += 1
+    return candidate
 
 # ---------- ESRGAN upscaling ----------
 def upscale_image(input_path: str, model_path: str, scale: int, device: str):
@@ -71,7 +71,7 @@ def vectorize_to_svg(raster_path: str, svg_path: str, args):
 
 # ---------- per-image pipeline ----------
 def process_image(image_path: str, args, device: str):
-    base = os.path.splitext(os.path.basename(image_path))[0]
+    base = args.base_name or os.path.splitext(os.path.basename(image_path))[0]
     target_svg = safe_svg_path(args.output, base)
 
     score = measure_image_quality(image_path)
@@ -101,6 +101,7 @@ def main():
     parser.add_argument("--output", default="output", help="Output directory for SVGs")
     parser.add_argument("--scale", type=int, default=4, help="Upscale factor (default: 4)")
     parser.add_argument("--quality_threshold", type=float, default=5500.0, help="Laplacian variance threshold")
+    parser.add_argument("--base_name", default=None, help="Base name for output (used by API)")
 
     # VTracer defaults (your tuned values)
     parser.add_argument("--mode", default="spline", choices=["polygon", "spline", "pixel"])

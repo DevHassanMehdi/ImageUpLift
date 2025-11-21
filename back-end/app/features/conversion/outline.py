@@ -3,6 +3,7 @@ import os
 import subprocess
 import cv2
 import numpy as np
+from datetime import datetime
 
 def detect_edges(image_path, low_threshold=100, high_threshold=200):
     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
@@ -60,16 +61,17 @@ def potrace_to_svg(pbm_path, svg_path):
 
 def safe_svg_path(output_dir, base_name):
     os.makedirs(output_dir, exist_ok=True)
-    path = os.path.join(output_dir, f"{base_name}_outline.svg")
+    ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S-%f")
+    path = os.path.join(output_dir, f"{base_name}_outline_{ts}.svg")
     i = 1
     while os.path.exists(path):
-        path = os.path.join(output_dir, f"{base_name}_outline_{i}.svg")
+        path = os.path.join(output_dir, f"{base_name}_outline_{ts}_{i}.svg")
         i += 1
     return path
 
 
-def process_image(image_path, output_dir, low, high, preview=False):
-    base_name = os.path.splitext(os.path.basename(image_path))[0]
+def process_image(image_path, output_dir, low, high, preview=False, base_name_override=None):
+    base_name = base_name_override or os.path.splitext(os.path.basename(image_path))[0]
     temp_pbm = os.path.join(output_dir, f"{base_name}_temp_edges.pbm")
     final_svg = safe_svg_path(output_dir, base_name)
 
@@ -99,6 +101,7 @@ def main():
     parser.add_argument("--low", type=int, default=100, help="Canny low threshold")
     parser.add_argument("--high", type=int, default=200, help="Canny high threshold")
     parser.add_argument("--preview", action="store_true", help="Keep PBM & save PNG edge preview")
+    parser.add_argument("--base_name", default=None, help="Base name override for outputs")
     args = parser.parse_args()
 
     valid_exts = (".png", ".jpg", ".jpeg", ".bmp", ".tif", ".tiff", ".webp")
@@ -107,11 +110,11 @@ def main():
         for file in sorted(os.listdir(args.input)):
             full_path = os.path.join(args.input, file)
             if file.lower().endswith(valid_exts):
-                process_image(full_path, args.output, args.low, args.high, args.preview)
+                process_image(full_path, args.output, args.low, args.high, args.preview, args.base_name)
     else:
         if not args.input.lower().endswith(valid_exts):
             raise ValueError("Unsupported image format")
-        process_image(args.input, args.output, args.low, args.high, args.preview)
+        process_image(args.input, args.output, args.low, args.high, args.preview, args.base_name)
 
 
 if __name__ == "__main__":
