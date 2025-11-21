@@ -88,6 +88,7 @@ async def convert_image(
         output_dir = "app/output"
         os.makedirs(output_dir, exist_ok=True)
         device = "cuda" if torch.cuda.is_available() else "cpu"
+        original_name = os.path.splitext(file.filename)[0] if file.filename else "upload"
 
         # ✅ VECTOR mode
         if outputType.lower() == "vector":
@@ -99,6 +100,7 @@ async def convert_image(
                 "app/features/conversion/vectorization.py",
                 "--input", tmp_path,
                 "--output", output_dir,
+                "--base_name", original_name,
                 "--hierarchical", hierarchical,
                 "--filter_speckle", str(filter_speckle),
                 "--color_precision", str(color_precision),
@@ -142,7 +144,7 @@ async def convert_image(
         elif outputType.lower() == "outline":
             print("🟨 Starting outline vectorization...")
             try:
-                outline_process(tmp_path, output_dir, low, high)
+                outline_process(tmp_path, output_dir, low, high, base_name_override=original_name)
             except FileNotFoundError:
                 return JSONResponse(
                     status_code=500,
@@ -155,7 +157,13 @@ async def convert_image(
                 )
 
             svg_files = sorted(
-                [f for f in os.listdir(output_dir) if f.endswith("_outline.svg")],
+                [
+                    f
+                    for f in os.listdir(output_dir)
+                    if f.endswith(".svg")
+                    and ("_outline_" in f or f.endswith("_outline.svg"))
+                    and (f.startswith(original_name) or original_name in f)
+                ],
                 key=lambda f: os.path.getmtime(os.path.join(output_dir, f)),
                 reverse=True,
             )
@@ -174,6 +182,7 @@ async def convert_image(
                 "--input", tmp_path,
                 "--output", output_dir,
                 "--model_path", "app/weights/RealESRGAN_x4plus.pth",
+                "--base_name", original_name,
             ]
 
             try:
@@ -188,8 +197,9 @@ async def convert_image(
                 [
                     f
                     for f in os.listdir(output_dir)
-                    if f.endswith("_real_upscaled.png")
-                    or f.endswith("_real_upscaled.webp")
+                    if (f.endswith(".png") or f.endswith(".webp"))
+                    and "_real_upscaled" in f
+                    and (f.startswith(original_name) or original_name in f)
                 ],
                 key=lambda f: os.path.getmtime(os.path.join(output_dir, f)),
                 reverse=True,

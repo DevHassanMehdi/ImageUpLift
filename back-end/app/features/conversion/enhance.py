@@ -2,6 +2,7 @@ import argparse
 import os
 import cv2
 import torch
+from datetime import datetime
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from realesrgan import RealESRGANer
 
@@ -13,6 +14,7 @@ def main():
     parser.add_argument("--scale", type=int, default=4, help="Upscale factor (default: 4)")
     parser.add_argument("--model_path", type=str, default="RealESRGAN_x4plus.pth",
                         help="Path to the RealESRGAN_x4plus model (.pth)")
+    parser.add_argument("--base_name", type=str, default=None, help="Base name override for output file")
     args = parser.parse_args()
 
     os.makedirs(args.output, exist_ok=True)
@@ -58,7 +60,9 @@ def main():
 
     filename = os.path.basename(args.input)
     name, ext = os.path.splitext(filename)
-    out_path = os.path.join(args.output, f"{name}_real_upscaled{ext}")
+    base = args.base_name or name
+    ts = datetime.utcnow().strftime("%Y%m%d-%H%M%S-%f")
+    out_path = os.path.join(args.output, f"{base}_real_upscaled_{ts}{ext}")
     cv2.imwrite(out_path, output)
 
     print(f"✅ Realistically upscaled image saved to: {out_path}")

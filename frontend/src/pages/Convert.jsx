@@ -3,6 +3,7 @@ import UploadDropzone from '../components/UploadDropzone';
 import PreviewPane from '../components/PreviewPane';
 import SettingsPanel from '../components/SettingsPanel';
 import StatsCard from '../components/StatsCard';
+import ImageInsights from '../components/ImageInsights';
 
 const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001';
 
@@ -12,10 +13,12 @@ export default function Convert() {
   const [vectorSrc, setVectorSrc] = useState('');
   const [loading, setLoading] = useState(false);
   const [recommending, setRecommending] = useState(false);
-  const [imagesConverted, setImagesConverted] = useState(0);
-  const [lastTimeSec, setLastTimeSec] = useState(0);
+  const [imagesConverted] = useState(0);
+  const [lastTimeSec] = useState(0);
   const [outlineLow, setOutlineLow] = useState(100);
   const [outlineHigh, setOutlineHigh] = useState(200);
+  const [metadata, setMetadata] = useState(null);
+  const [recommendation, setRecommendation] = useState(null);
 
   const [settings, setSettings] = useState({
     outputType: 'vector',
@@ -37,6 +40,8 @@ export default function Convert() {
       setVectorSrc('');
       setOutlineLow(100);
       setOutlineHigh(200);
+      setMetadata(null);
+      setRecommendation(null);
       return;
     }
     const url = URL.createObjectURL(file);
@@ -70,6 +75,8 @@ export default function Convert() {
         const vector = rec.vector_settings || {};
         const outline = rec.outline_settings || {};
         const nextOutput = rec.conversion_mode || settings.outputType;
+        setMetadata(json.metadata || null);
+        setRecommendation(rec || null);
 
         setSettings(prev => ({
           ...prev,
@@ -107,6 +114,8 @@ export default function Convert() {
     setFile(null);
     setOriginalSrc('');
     setVectorSrc('');
+    setMetadata(null);
+    setRecommendation(null);
   };
 
   return (
@@ -144,6 +153,7 @@ export default function Convert() {
           setOutlineHigh={setOutlineHigh}
         />
         <StatsCard count={imagesConverted} lastTimeSec={lastTimeSec} />
+        <ImageInsights metadata={metadata} recommendation={recommendation} />
       </div>
     </div>
   );
