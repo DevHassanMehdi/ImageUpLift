@@ -13,8 +13,8 @@ export default function Convert() {
   const [vectorSrc, setVectorSrc] = useState('');
   const [loading, setLoading] = useState(false);
   const [recommending, setRecommending] = useState(false);
-  const [imagesConverted, setImagesConverted] = useState(0);
-  const [lastTimeSec, setLastTimeSec] = useState(0);
+  const [imagesConverted] = useState(0);
+  const [lastTimeSec] = useState(0);
   const [outlineLow, setOutlineLow] = useState(100);
   const [outlineHigh, setOutlineHigh] = useState(200);
   const [metadata, setMetadata] = useState(null);

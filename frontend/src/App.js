@@ -1,4 +1,4 @@
-import { Routes, Route, NavLink, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Convert from './pages/Convert';
 import Gallery from './pages/Gallery';
