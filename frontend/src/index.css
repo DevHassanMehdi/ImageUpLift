@@ -149,3 +149,14 @@ body{
   background:#f8fafc;border:1px solid var(--border);color:#0f172a;
 }
 .btn-secondary:hover{border-color:var(--primary-300);background:#eef1f7}
+
+/* Insights */
+.insights-card{padding:16px;margin-top:16px}
+.insights-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.insights-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+@media (max-width:760px){.insights-grid{grid-template-columns:1fr}}
+.insight-row strong{color:#0f172a}
+.insight-block{margin-top:12px}
+.swatch-row{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+.swatch{width:28px;height:20px;border-radius:6px;border:1px solid rgba(0,0,0,.07)}
+.kv-pair{display:flex;justify-content:space-between;align-items:center;margin-top:4px;font-size:14px;color:#475569}
