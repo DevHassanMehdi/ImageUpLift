@@ -1,102 +1,152 @@
 #!/bin/bash
 set -e
 
-ENV_NAME="bitvector-test"
+ENV_NAME="imageuplift"
 PYTHON_VERSION="3.10"
-MODEL_URL="https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.2.4/RealESRGAN_x4plus_anime_6B.pth"
-MODEL_DIR="app/weights"
-MODEL_PATH="$MODEL_DIR/RealESRGAN_x4plus_anime_6B.pth"
 
-echo "🚀 Setting up full Bit-to-Vector environment..."
-echo "-----------------------------------------------"
+echo "=============================================="
+echo " 🚀 ImageUpLift Environment Setup"
+echo "=============================================="
 
-# Detect OS
-OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-ARCH=$(uname -m)
-echo "🔍 Detected OS: $OS ($ARCH)"
+# --------------------------------------------------------------------
+# Detect OS Platform (Linux / macOS / WSL)
+# --------------------------------------------------------------------
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 
-# Ensure conda is installed
+if grep -qi microsoft /proc/version 2>/dev/null; then
+    OS="wsl"
+fi
+
+echo "🔍 Detected Platform: $OS"
+
+
+# --------------------------------------------------------------------
+# Ensure conda exists
+# --------------------------------------------------------------------
 if ! command -v conda &> /dev/null; then
-    echo "❌ Conda not found. Please install Miniconda or Anaconda first."
+    echo "❌ Conda not found. Install Miniconda or Anaconda first."
     exit 1
 fi
 
-# Create environment if it doesn’t exist
+eval "$(conda shell.bash hook)"
+
+# --------------------------------------------------------------------
+# Create or Update Environment
+# --------------------------------------------------------------------
 if conda env list | grep -q "^$ENV_NAME\s"; then
-    echo "🔄 Environment '$ENV_NAME' already exists. Updating dependencies..."
+    echo "🔄 Environment '$ENV_NAME' already exists. Updating packages..."
 else
-    echo "📦 Creating new conda environment '$ENV_NAME'..."
+    echo "📦 Creating environment '$ENV_NAME'..."
     conda create -y -n $ENV_NAME python=$PYTHON_VERSION
 fi
 
-# Activate environment
-eval "$(conda shell.bash hook)"
 conda activate $ENV_NAME
 
-echo "⚙️ Installing core dependencies..."
+
+# --------------------------------------------------------------------
+# Install Python Dependencies
+# --------------------------------------------------------------------
+echo "📦 Installing Python dependencies..."
 pip install --upgrade pip
-pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
 
-# ✅ Mac-friendly pip packages (no OpenCV GUI)
-# pip install basicsr==1.4.2 realesrgan opencv-python==4.8.1.78 numpy==1.26.4 scikit-image==0.25.2 scipy==1.15.3
-pip install basicsr==1.4.2 realesrgan opencv-python-headless "numpy>=1.24,<1.27" scikit-image==0.21.0 "scipy>=1.10,<1.11"
-# pip install fastapi==0.100.0 uvicorn==0.37.0 python-multipart==0.0.20 pydantic==1.10.13 loguru==0.7.3
-pip install fastapi==0.100.0 "uvicorn>=0.30,<0.31" python-multipart==0.0.20 pydantic==1.10.13 loguru==0.7.3
-pip install cairosvg cairocffi pillow tqdm
+if [[ "$OS" == "linux" ]]; then
+    pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+else
+    pip install torch torchvision torchaudio
+fi
 
-echo "✅ Python environment ready."
+pip install \
+    basicsr==1.4.2 \
+    realesrgan \
+    opencv-python-headless \
+    "numpy>=1.24" \
+    "scipy>=1.10" \
+    "scikit-image>=0.21" \
+    fastapi==0.100.0 \
+    "uvicorn>=0.30,<0.31" \
+    python-multipart \
+    pydantic==1.10.13 \
+    pillow \
+    tqdm \
+    cairosvg \
+    cairocffi \
+    loguru \
+    git+https://github.com/openai/CLIP.git
 
-# --- Install VTracer ---
-echo "🎨 Setting up VTracer..."
+
+
+# --------------------------------------------------------------------
+# System Dependencies (potrace, cairo, build tools)
+# --------------------------------------------------------------------
+echo "🛠 Installing system dependencies..."
+
+if [[ "$OS" == "linux" || "$OS" == "wsl" ]]; then
+    sudo apt-get update -y
+    sudo apt-get install -y \
+        build-essential \
+        pkg-config \
+        potrace \
+        libcairo2-dev \
+        libpango1.0-dev \
+        libjpeg-dev \
+        libgif-dev \
+        libtiff5-dev \
+        wget curl
+fi
+
+if [[ "$OS" == "darwin" ]]; then
+    if ! command -v brew &> /dev/null; then
+        echo "🍺 Homebrew not found — installing..."
+        NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+
+    brew install potrace cairo pango giflib libjpeg libtiff
+fi
+
+
+# --------------------------------------------------------------------
+# Install Rust + Cargo
+# --------------------------------------------------------------------
 if ! command -v cargo &> /dev/null; then
     echo "📦 Installing Rust (Cargo)..."
     curl https://sh.rustup.rs -sSf | sh -s -- -y
     source "$HOME/.cargo/env"
 fi
 
-if ! command -v vtracer &> /dev/null; then
-    echo "📦 Installing VTracer via Cargo..."
+# Add cargo PATH permanently (bash only)
+if ! grep -q 'cargo/bin' "$HOME/.bashrc" 2>/dev/null; then
+    echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> "$HOME/.bashrc"
+fi
+
+source "$HOME/.bashrc"
+
+
+# --------------------------------------------------------------------
+# Install VTracer
+# --------------------------------------------------------------------
+echo "🎨 Installing VTracer..."
+if ! command -v vtracer &>/dev/null; then
     cargo install vtracer
 else
-    echo "✅ VTracer already installed."
+    echo "✔ VTracer already installed."
 fi
 
-# Add Cargo path for all OS types
-echo "🔧 Ensuring Cargo path is added..."
-if [[ "$OS" == "darwin" ]]; then
-    SHELL_RC="$HOME/.zprofile"
-elif [[ "$SHELL" == *"zsh"* ]]; then
-    SHELL_RC="$HOME/.zshrc"
-elif [[ "$SHELL" == *"bash"* ]]; then
-    SHELL_RC="$HOME/.bashrc"
-else
-    SHELL_RC="$HOME/.profile"
-fi
 
-if ! grep -q 'cargo/bin' "$SHELL_RC"; then
-    echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> "$SHELL_RC"
-    echo "✅ Cargo path added to $SHELL_RC"
-fi
-source "$SHELL_RC"
+# --------------------------------------------------------------------
+# Final Verification
+# --------------------------------------------------------------------
+echo "🔍 Verifying installation..."
+python - <<EOF
+import torch
+print("Torch version:", torch.__version__)
+print("CUDA available:", torch.cuda.is_available())
+EOF
 
-# --- Model Download ---
-echo "🧠 Checking ESRGAN model..."
-mkdir -p "$MODEL_DIR"
-if [ ! -f "$MODEL_PATH" ]; then
-    echo "⬇️ Downloading ESRGAN model weights..."
-    wget -q "$MODEL_URL" -P "$MODEL_DIR"
-    echo "✅ Model downloaded: $MODEL_PATH"
-else
-    echo "✅ Model already exists."
-fi
+vtracer --version || echo "⚠️ VTracer not in PATH"
 
-# --- Final Verification ---
-echo "🧩 Verifying installation..."
-python -c "import torch; print('Torch CUDA available:', torch.cuda.is_available())"
-vtracer --version || echo "⚠️ VTracer not found in PATH (try restarting your terminal)."
 
-echo "🎉 Setup complete!"
-echo "-----------------------------------------------"
-echo "👉 Activate environment: conda activate $ENV_NAME"
-echo "👉 Run example: python app/features/conversion/vectorization.py --input app/samples/3.png"
-echo "-----------------------------------------------"
+echo "=============================================="
+echo "🎉 ImageUpLift Setup Complete!"
+echo "👉 Activate env:  conda activate $ENV_NAME"
+echo "👉 Start backend: uvicorn app.main:app --reload"
+echo "=============================================="
