@@ -22,7 +22,7 @@ async def options_convert():
 async def recommend_settings(file: UploadFile = File(...)):
     """
     Accepts an image file, extracts metadata, and returns
-    recommended conversion settings (vector, outline, and mode).
+    recommended conversion settings (vectorize, outline, and mode).
     """
     with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as tmp:
         tmp.write(await file.read())
@@ -32,7 +32,7 @@ async def recommend_settings(file: UploadFile = File(...)):
         # 1. Extract metadata
         metadata = extract_image_metadata(tmp_path)
 
-        # 2. Get recommendation (vector + outline + mode)
+        # 2. Get recommendation (vectorize + outline + mode)
         recommendation = recommend_conversion(metadata)
 
         # 3. Build response
@@ -58,17 +58,17 @@ async def recommend_settings(file: UploadFile = File(...)):
 @router.post("/convert")
 async def convert_image(
     file: UploadFile = File(...),
-    outputType: str = Form("vector"),  # 'vector', 'outline', 'enhance'
-    # legacy fields (ignored for vector now)
+    outputType: str = Form("vectorize"),  # 'vectorize', 'outline', 'enhance'
+    # legacy fields (ignored for vectorize now)
     quality: str = Form("balanced"),
     detail: int = Form(75),
     colorReduction: str = Form("auto"),
     # outline fields
     low: int = Form(100),
     high: int = Form(200),
-    # new vector fields
+    # new vectorize fields
     hierarchical: str = Form("stacked"),
-    filter_speckle: int = Form(16),
+    filter_speckle: int = Form(8),
     color_precision: int = Form(6),
     gradient_step: int = Form(60),
     preset: str = Form(None),
@@ -90,8 +90,8 @@ async def convert_image(
         device = "cuda" if torch.cuda.is_available() else "cpu"
         original_name = os.path.splitext(file.filename)[0] if file.filename else "upload"
 
-        # ✅ VECTOR mode
-        if outputType.lower() == "vector":
+        # ✅ vectorize mode
+        if outputType.lower() == "vectorize":
             print("🟦 Starting vectorization with new parameters...")
 
             # Build command for subprocess call to vectorization.py

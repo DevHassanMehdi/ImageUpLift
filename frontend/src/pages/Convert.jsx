@@ -23,9 +23,9 @@ export default function Convert() {
   const [toasts, setToasts] = useState([]);
 
   const [settings, setSettings] = useState({
-    outputType: 'vector',
+    outputType: 'vectorize',
     hierarchical: 'stacked',
-    filterSpeckle: 16,
+    filterSpeckle: 8,
     colorPrecision: 6,
     gradientStep: 60,
     preset: '',
@@ -74,7 +74,7 @@ export default function Convert() {
         if (cancelled) return;
 
         const rec = json.recommendation || {};
-        const vector = rec.vector_settings || {};
+        const vectorize = rec.vector_settings || {};
         const outline = rec.outline_settings || {};
         const nextOutput = rec.conversion_mode || settings.outputType;
         setMetadata(json.metadata || null);
@@ -84,15 +84,15 @@ export default function Convert() {
         setSettings(prev => ({
           ...prev,
           outputType: nextOutput,
-          hierarchical: vector.hierarchical ?? prev.hierarchical,
-          filterSpeckle: Number(vector.filter_speckle ?? prev.filterSpeckle),
-          colorPrecision: Number(vector.color_precision ?? prev.colorPrecision),
-          gradientStep: Number(vector.gradient_step ?? prev.gradientStep),
-          preset: vector.preset ?? prev.preset ?? '',
-          mode: vector.mode ?? prev.mode,
-          cornerThreshold: Number(vector.corner_threshold ?? prev.cornerThreshold),
-          segmentLength: Number(vector.segment_length ?? prev.segmentLength),
-          spliceThreshold: Number(vector.splice_threshold ?? prev.spliceThreshold)
+          hierarchical: vectorize.hierarchical ?? prev.hierarchical,
+          filterSpeckle: Number(vectorize.filter_speckle ?? prev.filterSpeckle),
+          colorPrecision: Number(vectorize.color_precision ?? prev.colorPrecision),
+          gradientStep: Number(vectorize.gradient_step ?? prev.gradientStep),
+          preset: vectorize.preset ?? prev.preset ?? '',
+          mode: vectorize.mode ?? prev.mode,
+          cornerThreshold: Number(vectorize.corner_threshold ?? prev.cornerThreshold),
+          segmentLength: Number(vectorize.segment_length ?? prev.segmentLength),
+          spliceThreshold: Number(vectorize.splice_threshold ?? prev.spliceThreshold)
         }));
 
         if (outline.low !== undefined) setOutlineLow(Number(outline.low));

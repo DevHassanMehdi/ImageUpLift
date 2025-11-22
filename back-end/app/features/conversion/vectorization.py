@@ -106,7 +106,7 @@ def main():
     # VTracer defaults (your tuned values)
     parser.add_argument("--mode", default="spline", choices=["polygon", "spline", "pixel"])
     parser.add_argument("--color_precision", type=int, default=6)
-    parser.add_argument("--filter_speckle", type=int, default=16)
+    parser.add_argument("--filter_speckle", type=int, default=8)
     parser.add_argument("--hierarchical", default="stacked", choices=["stacked", "cutout"])
     parser.add_argument("--corner_threshold", type=int, default=40)
     parser.add_argument("--gradient_step", type=int, default=60)
