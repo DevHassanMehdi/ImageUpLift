@@ -8,7 +8,7 @@ MODEL_A="$MODEL_DIR/RealESRGAN_x4plus_anime_6B.pth"
 MODEL_B="$MODEL_DIR/RealESRGAN_x4plus.pth"
 
 echo "=============================================="
-echo "Bit-to-Vector Backend Environment Setup"
+echo "ImageUpLift Backend Environment Setup"
 echo "=============================================="
 
 # Detect OS
