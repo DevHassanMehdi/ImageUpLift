@@ -68,7 +68,7 @@ async def convert_image(
     high: int = Form(200),
     # new vectorize fields
     hierarchical: str = Form("stacked"),
-    filter_speckle: int = Form(16),
+    filter_speckle: int = Form(8),
     color_precision: int = Form(6),
     gradient_step: int = Form(60),
     preset: str = Form(None),

@@ -25,7 +25,7 @@ export default function Convert() {
   const [settings, setSettings] = useState({
     outputType: 'vectorize',
     hierarchical: 'stacked',
-    filterSpeckle: 16,
+    filterSpeckle: 8,
     colorPrecision: 6,
     gradientStep: 60,
     preset: '',

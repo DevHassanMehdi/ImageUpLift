@@ -162,7 +162,7 @@ def extract_image_metadata(image_path):
 DEFAULT_VECTOR_SETTINGS = {
     "mode": "spline",
     "color_precision": 6,
-    "filter_speckle": 16,
+    "filter_speckle": 8,
     "hierarchical": "stacked",
     "corner_threshold": 40,
     "gradient_step": 60,
@@ -205,7 +205,7 @@ def recommend_vector_settings(metadata):
 
     # Simple logos → reduce speckle filter
     if color_count < 64 and edge_density < 0.02:
-        settings["filter_speckle"] = max(0, settings["filter_speckle"] - 8)
+        settings["filter_speckle"] = max(0, settings["filter_speckle"] - 2)
 
     return settings
 
