@@ -82,4 +82,4 @@ Key VTracer flags (vectorization.py):
 ---
 
 ## License
-MIT License (2025) — AI-based image enhancement and vectorization research.
+---
