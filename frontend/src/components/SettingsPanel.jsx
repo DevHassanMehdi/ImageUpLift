@@ -32,13 +32,12 @@ export default function SettingsPanel({
       fd.append("file", file);
       fd.append("outputType", settings.outputType);
 
-      // Vector mode params
-      if (settings.outputType === "vector") {
+      // vectorize mode params
+      if (settings.outputType === "vectorize") {
         fd.append("hierarchical", settings.hierarchical);
         fd.append("filter_speckle", settings.filterSpeckle);
         fd.append("color_precision", settings.colorPrecision);
         fd.append("gradient_step", settings.gradientStep);
-        if (settings.preset) fd.append("preset", settings.preset);
         fd.append("mode", settings.mode);
 
         if (settings.mode === "spline") {
@@ -91,7 +90,7 @@ export default function SettingsPanel({
     }
   };
 
-  const showVectorSettings = settings.outputType === 'vector';
+  const showVectorSettings = settings.outputType === 'vectorize';
   const showOutlineSettings = settings.outputType === 'outline';
   const showEnhanceSettings = settings.outputType === 'enhance';
   const busy = loading || recommending;
@@ -104,7 +103,7 @@ export default function SettingsPanel({
           <span className="badge">Output Type</span>
         </div>
         <div className="group" style={{ marginTop: 8 }}>
-          {['vector', 'outline', 'enhance'].map(k => (
+          {['vectorize', 'outline', 'enhance'].map(k => (
             <button
               key={k}
               className={`btn btn-ghost ${settings.outputType === k ? 'active' : ''}`}
@@ -117,7 +116,7 @@ export default function SettingsPanel({
         </div>
       </div>
 
-      {/* --- Vector Mode Settings (Updated) --- */}
+      {/* --- vectorize Mode Settings (Updated) --- */}
       {showVectorSettings && (
         <>
           {/* Hierarchical */}
@@ -189,26 +188,7 @@ export default function SettingsPanel({
               onChange={e => set('gradientStep', Number(e.target.value))}
               disabled={recommending}
             />
-          </div>
-
-          {/* Preset */}
-          <div className="section">
-            <div className="kv"><span className="badge">Preset</span></div>
-            <div className="group" style={{ marginTop: 8 }}>
-              {['bw', 'poster', 'photo'].map(k => (
-                <button
-                  key={k}
-                  className={`btn btn-ghost ${settings.preset === k ? 'active' : ''}`}
-                  onClick={() => set('preset', settings.preset === k ? '' : k)}
-                  disabled={recommending}
-                >
-                  {k.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Mode */}
+          </div>          {/* Mode */}
           <div className="section">
             <div className="kv"><span className="badge">Mode</span></div>
             <div className="group" style={{ marginTop: 8 }}>
@@ -344,3 +324,4 @@ export default function SettingsPanel({
     </aside>
   );
 }
+

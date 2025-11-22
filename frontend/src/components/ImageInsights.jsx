@@ -31,7 +31,7 @@ export default function ImageInsights({ metadata, recommendation }) {
   const type = metadata.ai_image_type;
   const conf = metadata.ai_confidence ? `${Math.round(metadata.ai_confidence * 100)}%` : null;
   const mode = recommendation?.conversion_mode;
-  const vector = recommendation?.vector_settings || {};
+  const vectorize = recommendation?.vector_settings || {};
   const outline = recommendation?.outline_settings || {};
 
   return (
@@ -61,20 +61,20 @@ export default function ImageInsights({ metadata, recommendation }) {
         </div>
       )}
 
-      {mode === "vector" && (
+      {mode === "vectorize" && (
         <div className="insight-block">
-          <div className="muted">Vector Settings</div>
+          <div className="muted">vectorize Settings</div>
           <div className="kv-pair">
-            <span>Mode</span><strong>{vector.mode || "-"}</strong>
+            <span>Mode</span><strong>{vectorize.mode || "-"}</strong>
           </div>
           <div className="kv-pair">
-            <span>Color Precision</span><strong>{vector.color_precision ?? "-"}</strong>
+            <span>Color Precision</span><strong>{vectorize.color_precision ?? "-"}</strong>
           </div>
           <div className="kv-pair">
-            <span>Filter Speckle</span><strong>{vector.filter_speckle ?? "-"}</strong>
+            <span>Filter Speckle</span><strong>{vectorize.filter_speckle ?? "-"}</strong>
           </div>
           <div className="kv-pair">
-            <span>Gradient Step</span><strong>{vector.gradient_step ?? "-"}</strong>
+            <span>Gradient Step</span><strong>{vectorize.gradient_step ?? "-"}</strong>
           </div>
         </div>
       )}

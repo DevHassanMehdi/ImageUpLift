@@ -4,7 +4,7 @@ from fastapi.responses import JSONResponse
 from app.features.conversion import router as conversion_router
 from loguru import logger
 
-app = FastAPI(title="Bitmap to Vector Conversion Service", version="0.1.0")
+app = FastAPI(title="ImageUpLift Service", version="0.1.0")
 
 # ✅ Log incoming origins for debugging
 @app.middleware("http")
@@ -31,7 +31,7 @@ app.include_router(conversion_router.router)
 # ✅ Root endpoint
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to Bitmap-to-Vector Conversion Service API"}
+    return {"message": "Welcome to ImageUpLift Service API"}
 
 # ✅ Health check endpoint
 @app.get("/health")

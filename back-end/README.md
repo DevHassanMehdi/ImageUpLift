@@ -9,7 +9,7 @@ AI-powered image enhancement (Real-ESRGAN) and vectorization (VTracer/Potrace) s
 ### Conversion
 - `router.py` — FastAPI routes:
   - `POST /conversion/recommend`: extract image metadata + recommend mode/settings.
-  - `POST /conversion/convert`: run vector (VTracer), outline (Canny + Potrace), or enhance (Real-ESRGAN).
+  - `POST /conversion/convert`: run vectorize (VTracer), outline (Canny + Potrace), or enhance (Real-ESRGAN).
 - `vectorization.py` — Pipeline: sharpness check → optional ESRGAN upscale → VTracer SVG. Unique timestamped filenames.
 - `outline.py` — Canny + Potrace outline SVG with timestamped filenames.
 - `enhance.py` — Real-ESRGAN photo upscaler; unique timestamped outputs.
@@ -17,7 +17,7 @@ AI-powered image enhancement (Real-ESRGAN) and vectorization (VTracer/Potrace) s
 - `upscale.py` — Standalone ESRGAN upscaler.
 
 ### Helpers
-- `recommend_settings.py` — Extracts metadata (OpenCV/PIL/CLIP) and recommends conversion mode + vector/outline settings.
+- `recommend_settings.py` — Extracts metadata (OpenCV/PIL/CLIP) and recommends conversion mode + vectorize/outline settings.
 
 ---
 

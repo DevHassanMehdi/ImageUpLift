@@ -4,7 +4,7 @@ import subprocess
 from pathlib import Path
 
 def main():
-    parser = argparse.ArgumentParser(description="Bitmap to Vector converter using vtracer (v0.6.4 compatible)")
+    parser = argparse.ArgumentParser(description="Images to SVG converter using vtracer (v0.6.4 compatible)")
     parser.add_argument("--input", required=True, help="Path to input bitmap image")
     parser.add_argument("--mode", default="polygon", choices=["pixel", "polygon", "spline"], help="Vectorization mode")
     parser.add_argument("--color_precision", type=int, default=12, help="Number of significant bits for color precision")

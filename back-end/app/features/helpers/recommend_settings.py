@@ -72,7 +72,7 @@ def classify_with_clip(pil_img):
 
     text_prompts = [
         "a simple logo or icon on a plain background",
-        "a flat vector illustration or graphic design",
+        "a flat vectorize illustration or graphic design",
         "a cartoon or character illustration",
         "a watercolor or stylized logo",
         "a realistic photograph of a person",
@@ -180,7 +180,7 @@ DEFAULT_OUTLINE_SETTINGS = {
 
 
 # -----------------------
-# Vector recommendation
+# vectorize recommendation
 # -----------------------
 
 def recommend_vector_settings(metadata):
@@ -247,7 +247,7 @@ def recommend_conversion(metadata):
         vector_settings = DEFAULT_VECTOR_SETTINGS.copy()
         outline_settings = DEFAULT_OUTLINE_SETTINGS.copy()
     else:
-        conversion_mode = "vector"
+        conversion_mode = "vectorize"
         vector_settings = recommend_vector_settings(metadata)
         outline_settings = recommend_outline_settings(metadata)
 
