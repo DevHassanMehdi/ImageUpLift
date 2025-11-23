@@ -1,0 +1,56 @@
+<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+
+  <defs>
+    <linearGradient id="upliftGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366F1" stop-opacity="0.4"/>
+      <stop offset="50%" stop-color="#7C3AED" stop-opacity="0.8"/>
+      <stop offset="100%" stop-color="#8B5CF6" stop-opacity="1"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Outer frame -->
+  <rect x="25" y="25" width="150" height="150" rx="16"
+        fill="none" stroke="url(#upliftGradient)" stroke-width="10"/>
+
+  <!-- Pixel blocks (bitmap side) -->
+  <g opacity="0.65">
+    <rect x="40" y="125" width="10" height="10" rx="2" fill="#94A3B8"/>
+    <rect x="35" y="100" width="16" height="16" rx="2" fill="#94A3B8"/>
+    <rect x="55" y="110" width="16" height="16" rx="2" fill="#94A3B8"/>
+    <rect x="70" y="130" width="20" height="20" rx="2" fill="#94A3B8"/>
+    <rect x="70" y="155" width="12" height="12" rx="2" fill="#94A3B8"/>
+    <rect x="45" y="140" width="22" height="22" rx="2" fill="#94A3B8"/>
+  </g>
+
+  <!-- Transition wave -->
+  <path d="
+    M 80 120
+    Q 125 120 138 80"
+    fill="none"
+    stroke="url(#upliftGradient)"
+    stroke-width="15"
+    stroke-linecap="round"/>
+
+    <path d="
+    M 91 160
+    Q 160 160 138 80"
+    fill="none"
+    stroke="url(#upliftGradient)"
+    stroke-width="15"
+    stroke-linecap="round"/>
+
+  <!-- Smooth vector curves (final output) -->
+  <path d="
+    M 120 45
+    Q 140 50 155 45
+    M 120 65
+    Q 140 50 155 65
+  "
+    fill="none"
+    stroke="url(#upliftGradient)"
+    stroke-width="20"
+    stroke-linecap="round"
+    opacity="0.95"/>
+
+</svg>
+
