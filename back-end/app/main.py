@@ -4,7 +4,16 @@ from fastapi.responses import JSONResponse
 from app.features.conversion import router as conversion_router
 from loguru import logger
 
+from app.db import Base, engine
+import app.models
+
 app = FastAPI(title="ImageUpLift Service", version="0.1.0")
+
+
+@app.on_event("startup")
+def on_startup():
+    # Creates the conversions table if it doesn't exist
+    Base.metadata.create_all(bind=engine)
 
 # ✅ Log incoming origins for debugging
 @app.middleware("http")
