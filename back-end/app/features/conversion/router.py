@@ -1,71 +1,36 @@
-import hashlib
 import io
-import json
 import os
 import tempfile
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, UploadFile, File, Form, Depends
 from fastapi.responses import JSONResponse, StreamingResponse
-from PIL import Image as PilImage
 import torch
 import subprocess
 from sqlalchemy.orm import Session
+from sqlalchemy import desc, func
 
 from app.features.helpers.recommend_settings import extract_image_metadata, recommend_conversion
 from app.db import get_db
 from app.db import models
-from sqlalchemy import desc
 
 
 router = APIRouter(prefix="/conversion", tags=["Conversion"])
 
 
-def _hash_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def _read_image_stats(path: Path) -> tuple[Optional[int], Optional[int]]:
-    try:
-        with PilImage.open(path) as im:
-            return im.width, im.height
-    except Exception:
-        return None, None
-
-
-def _ensure_image(
-    db: Session,
-    filename: str,
-    mime: str,
-    blob: bytes,
-    size_bytes: int,
-    width: Optional[int],
-    height: Optional[int],
-    content_hash: str,
-):
+def _ensure_image(db: Session, filename: str, blob: bytes, size_bytes: int):
     """
-    Reuse existing image by content_hash, otherwise create one.
+    Always create a new image row (no dedupe), storing minimal fields.
     """
-    image = db.query(models.Image).filter(models.Image.content_hash == content_hash).first()
-    if image:
-        return image
-
-    aspect_ratio = (width / height) if width and height and height != 0 else None
     image = models.Image(
         original_filename=filename or "upload",
-        mime_type=mime,
         size_bytes=size_bytes,
-        width=width,
-        height=height,
-        aspect_ratio=aspect_ratio,
-        content_hash=content_hash,
         original_blob=blob,
     )
     db.add(image)
-    db.flush()  # populate id for FK usage
+    db.flush()
     return image
 
 
@@ -96,23 +61,11 @@ async def recommend_settings(file: UploadFile = File(...), db: Session = Depends
         metadata = extract_image_metadata(str(tmp_path))
         recommendation = recommend_conversion(metadata)
 
-        content_hash = _hash_bytes(upload_bytes)
-        width = metadata.get("width")
-        height = metadata.get("height")
-        if not width or not height:
-            w, h = _read_image_stats(tmp_path)
-            width = width or w
-            height = height or h
-
         image = _ensure_image(
             db=db,
             filename=file.filename,
-            mime=file.content_type,
             blob=upload_bytes,
             size_bytes=len(upload_bytes),
-            width=width,
-            height=height,
-            content_hash=content_hash,
         )
 
         rec_entry = models.Recommendation(
@@ -122,7 +75,6 @@ async def recommend_settings(file: UploadFile = File(...), db: Session = Depends
             outline_params=recommendation.get("outline_settings"),
             metadata_json=metadata,
             confidence_score=recommendation.get("confidence"),
-            recommender_version=recommendation.get("recommender_version"),
         )
         db.add(rec_entry)
         db.commit()
@@ -176,26 +128,18 @@ async def convert_image(
     output_dir = Path("app/output")
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    start_ts = datetime.utcnow()
     start_perf = time.perf_counter()
-    status = "fail"
-    failure_reason = None
     output_path = None
     output_bytes = None
     output_mime = None
     device = "gpu" if torch.cuda.is_available() else "cpu"
+    failure_reason = None
 
-    content_hash = _hash_bytes(upload_bytes)
-    width, height = _read_image_stats(tmp_path)
     image = _ensure_image(
         db=db,
         filename=file.filename,
-        mime=file.content_type,
         blob=upload_bytes,
         size_bytes=len(upload_bytes),
-        width=width,
-        height=height,
-        content_hash=content_hash,
     )
 
     chosen_params = {
@@ -262,7 +206,6 @@ async def convert_image(
                 raise RuntimeError("No SVG output generated.")
             output_path = svg_files[0]
             output_mime = "image/svg+xml"
-            status = "success"
 
         elif outputType.lower() == "outline":
             try:
@@ -288,7 +231,6 @@ async def convert_image(
                 raise RuntimeError("No outline SVG output generated.")
             output_path = svg_files[0]
             output_mime = "image/svg+xml"
-            status = "success"
 
         elif outputType.lower() == "enhance":
             args = [
@@ -314,7 +256,6 @@ async def convert_image(
                 raise RuntimeError("No upscaled image found.")
             output_path = upscaled_files[0]
             output_mime = "image/webp" if output_path.suffix == ".webp" else "image/png"
-            status = "success"
 
         else:
             return JSONResponse(status_code=400, content={"error": f"Unsupported outputType: {outputType}"})
@@ -323,33 +264,22 @@ async def convert_image(
         if output_path:
             output_bytes = output_path.read_bytes()
 
-    except subprocess.CalledProcessError as e:
-        failure_reason = f"subprocess failed: {e}"
     except Exception as e:
         failure_reason = str(e)
     finally:
         duration = time.perf_counter() - start_perf
 
-        output_hash = _hash_bytes(output_bytes) if output_bytes else None
         output_size = len(output_bytes) if output_bytes else None
-        ended_at = datetime.utcnow()
-
         conv_entry = models.Conversion(
             image_id=image.id,
             image_name=file.filename or "upload",
             image_type=file.content_type,
             mode=outputType.lower(),
             time_taken=duration,
-            started_at=start_ts,
-            ended_at=ended_at,
-            duration_sec=duration,
-            status=status,
-            failure_reason=failure_reason,
             device=device,
             chosen_params=chosen_params,
             output_mime=output_mime,
             output_size_bytes=output_size,
-            output_hash=output_hash,
             output_blob=output_bytes,
         )
         try:
@@ -370,7 +300,7 @@ async def convert_image(
             except OSError:
                 pass
 
-    if status != "success" or not output_bytes:
+    if not output_bytes:
         return JSONResponse(status_code=500, content={"error": failure_reason or "Conversion failed"})
 
     filename = f"{Path(file.filename or 'converted').stem}_output{Path(output_path).suffix if output_path else ''}"
@@ -379,13 +309,16 @@ async def convert_image(
 
 
 @router.get("/list")
-def list_conversions(limit: int = 50, db: Session = Depends(get_db)):
+def list_conversions(limit: int = 50, mode: Optional[str] = None, db: Session = Depends(get_db)):
     """
     Returns a paginated list of recent conversions for gallery/analytics use.
+    Optional filter by mode.
     """
+    q = db.query(models.Conversion)
+    if mode:
+        q = q.filter(func.lower(models.Conversion.mode) == mode.lower())
     rows = (
-        db.query(models.Conversion)
-        .order_by(desc(models.Conversion.timestamp))
+        q.order_by(desc(models.Conversion.created_at))
         .limit(min(limit, 200))
         .all()
     )
@@ -394,9 +327,10 @@ def list_conversions(limit: int = 50, db: Session = Depends(get_db)):
             "id": r.id,
             "image_name": r.image_name,
             "mode": r.mode,
-            "output_mime": r.output_mime,
-            "timestamp": r.timestamp,
             "image_id": r.image_id,
+            "chosen_params": r.chosen_params,
+            "output_size_bytes": r.output_size_bytes,
+            "output_mime": r.output_mime,
         }
         for r in rows
     ]
@@ -415,9 +349,11 @@ def conversion_detail(conversion_id: int, db: Session = Depends(get_db)):
         "id": conv.id,
         "image_name": conv.image_name,
         "mode": conv.mode,
-        "output_mime": conv.output_mime,
-        "timestamp": conv.timestamp,
         "image_id": conv.image_id,
+        "chosen_params": conv.chosen_params,
+        "device": conv.device,
+        "output_size_bytes": conv.output_size_bytes,
+        "output_mime": conv.output_mime,
         "output_url": f"/conversion/output/{conv.id}",
         "original_url": f"/conversion/original/{conv.image_id}" if conv.image_id else None,
     }
@@ -428,8 +364,11 @@ def get_conversion_output(conversion_id: int, db: Session = Depends(get_db)):
     conv = db.query(models.Conversion).filter(models.Conversion.id == conversion_id).first()
     if not conv or not conv.output_blob:
         return JSONResponse(status_code=404, content={"error": "Output not found"})
-    headers = {"Content-Disposition": f'inline; filename=\"{conv.image_name or 'output'}.{conv.output_mime.split('/')[-1] if conv.output_mime else 'bin'}\""}
-    return StreamingResponse(io.BytesIO(conv.output_blob), media_type=conv.output_mime or "application/octet-stream", headers=headers)
+    mime = conv.output_mime or ("image/svg+xml" if conv.mode in {"vectorize", "outline"} else "image/png")
+    ext = mime.split("/")[-1] if "/" in mime else "bin"
+    safe_name = conv.image_name or "output"
+    headers = {"Content-Disposition": f'inline; filename="{safe_name}.{ext}"'}
+    return StreamingResponse(io.BytesIO(conv.output_blob), media_type=mime, headers=headers)
 
 
 @router.get("/original/{image_id}")
@@ -437,5 +376,27 @@ def get_original_image(image_id: int, db: Session = Depends(get_db)):
     image = db.query(models.Image).filter(models.Image.id == image_id).first()
     if not image or not image.original_blob:
         return JSONResponse(status_code=404, content={"error": "Original not found"})
-    headers = {"Content-Disposition": f'inline; filename=\"{image.original_filename}\"'}
-    return StreamingResponse(io.BytesIO(image.original_blob), media_type=image.mime_type or "application/octet-stream", headers=headers)
+    headers = {"Content-Disposition": f'inline; filename="{image.original_filename}"'}
+    return StreamingResponse(io.BytesIO(image.original_blob), media_type="application/octet-stream", headers=headers)
+
+
+@router.delete("/{conversion_id}")
+def delete_conversion(conversion_id: int, db: Session = Depends(get_db)):
+    conv = db.query(models.Conversion).filter(models.Conversion.id == conversion_id).first()
+    if not conv:
+        return JSONResponse(status_code=404, content={"error": "Conversion not found"})
+    image_id = conv.image_id
+    db.delete(conv)
+    db.commit()
+
+    # If the image is now orphaned (no conversions, no recommendations), remove it
+    if image_id:
+        remaining_conv = db.query(models.Conversion).filter(models.Conversion.image_id == image_id).count()
+        remaining_rec = db.query(models.Recommendation).filter(models.Recommendation.image_id == image_id).count()
+        if remaining_conv == 0 and remaining_rec == 0:
+            image = db.query(models.Image).filter(models.Image.id == image_id).first()
+            if image:
+                db.delete(image)
+                db.commit()
+
+    return {"deleted": True, "id": conversion_id}
