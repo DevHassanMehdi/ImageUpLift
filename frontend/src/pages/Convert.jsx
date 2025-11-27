@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import UploadDropzone from '../components/UploadDropzone';
 import PreviewPane from '../components/PreviewPane';
 import SettingsPanel from '../components/SettingsPanel';
@@ -9,6 +10,7 @@ import Toasts from '../components/Toast';
 const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001';
 
 export default function Convert() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [file, setFile] = useState(null);
   const [originalSrc, setOriginalSrc] = useState('');
   const [vectorSrc, setVectorSrc] = useState('');
@@ -21,6 +23,7 @@ export default function Convert() {
   const [metadata, setMetadata] = useState(null);
   const [recommendation, setRecommendation] = useState(null);
   const [toasts, setToasts] = useState([]);
+  const [loadedConversionId, setLoadedConversionId] = useState(null);
 
   const [settings, setSettings] = useState({
     outputType: 'vectorize',
@@ -120,6 +123,12 @@ export default function Convert() {
     setVectorSrc('');
     setMetadata(null);
     setRecommendation(null);
+    setLoadedConversionId(null);
+    if (searchParams.has('conversionId')) {
+      const next = new URLSearchParams(searchParams);
+      next.delete('conversionId');
+      setSearchParams(next, { replace: true });
+    }
     addToast('Cleared image and previews', 'info', 1800);
   };
 
@@ -131,6 +140,56 @@ export default function Convert() {
   const removeToast = (id) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
+
+  // Load an existing conversion when navigated from Gallery
+  useEffect(() => {
+    const cid = searchParams.get('conversionId');
+    if (!cid || cid === loadedConversionId) return;
+
+    const fetchExisting = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(`${API_BASE}/conversion/detail/${cid}`);
+        if (!res.ok) {
+          throw new Error(`Failed to load conversion ${cid}`);
+        }
+        const json = await res.json();
+        if (json.original_url) {
+          setOriginalSrc(`${API_BASE}${json.original_url}`);
+        }
+        if (json.output_url) {
+          setVectorSrc(`${API_BASE}${json.output_url}`);
+        }
+        if (json.chosen_params) {
+          const params = json.chosen_params;
+          setSettings(prev => ({
+            ...prev,
+            outputType: params.outputType ?? prev.outputType,
+            hierarchical: params.hierarchical ?? prev.hierarchical,
+            filterSpeckle: Number(params.filter_speckle ?? prev.filterSpeckle),
+            colorPrecision: Number(params.color_precision ?? prev.colorPrecision),
+            gradientStep: Number(params.gradient_step ?? prev.gradientStep),
+            preset: params.preset ?? prev.preset ?? '',
+            mode: params.mode ?? prev.mode,
+            cornerThreshold: Number(params.corner_threshold ?? prev.cornerThreshold),
+            segmentLength: Number(params.segment_length ?? prev.segmentLength),
+            spliceThreshold: Number(params.splice_threshold ?? prev.spliceThreshold)
+          }));
+          if (params.low !== undefined) setOutlineLow(Number(params.low));
+          if (params.high !== undefined) setOutlineHigh(Number(params.high));
+        }
+        setLoadedConversionId(cid);
+        addToast('Loaded conversion from gallery', 'info', 2000);
+      } catch (err) {
+        console.error('Failed to load conversion', err);
+        addToast('Could not load selected conversion', 'error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchExisting();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   return (
     <div className="grid">

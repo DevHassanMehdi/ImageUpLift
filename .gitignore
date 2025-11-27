@@ -1,0 +1,40 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Env / secrets
+.env
+.venv/
+env/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Node
+node_modules/
+frontend/build/
+frontend/.cache/
+
+# Logs / coverage
+*.log
+logs/
+coverage/
+.coverage
+
+# SQLite / data
+imageuplift.db
+back-end/app/db/imageuplift.db
+back-end/app/output/
+
+# Misc
+*.tmp
+*.bak
+
+# Databases
+*.sqlite3
+*.db
