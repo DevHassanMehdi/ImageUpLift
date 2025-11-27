@@ -11,7 +11,7 @@ env/
 venv/
 
 # Python
-.__pycache__/
+__pycache__/
 *.py[cod]
 *.so
 
