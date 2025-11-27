@@ -60,6 +60,7 @@ pip install basicsr==1.4.2 realesrgan opencv-python-headless "numpy>=1.24,<1.27"
 pip install fastapi==0.100.0 "uvicorn>=0.30,<0.31" python-multipart==0.0.20 pydantic==1.10.13 loguru==0.7.3
 pip install cairosvg cairocffi pillow tqdm
 pip install git+https://github.com/openai/CLIP.git
+pip install "sqlalchemy>=2.0" psycopg2-binary
 
 # Rust/Cargo + vtracer
 echo "Setting up VTracer (Rust)..."
