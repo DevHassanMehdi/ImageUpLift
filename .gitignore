@@ -34,3 +34,7 @@ back-end/app/output/
 # Misc
 *.tmp
 *.bak
+
+# Databases
+*.sqlite3
+*.db
