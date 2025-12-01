@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc, cast, Date
+from sqlalchemy import func, desc
 from app.db import get_db
-from app import models
+from app.db.models import Conversion
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -11,25 +11,22 @@ router = APIRouter(prefix="/analytics", tags=["Analytics"])
 # -----------------------------------------
 @router.get("/summary")
 def get_summary(db: Session = Depends(get_db)):
-    total = db.query(models.Conversion).count()
+    total = db.query(Conversion).count()
 
-    # most used mode
     mode_row = (
-        db.query(models.Conversion.mode, func.count().label("count"))
-        .group_by(models.Conversion.mode)
+        db.query(Conversion.mode, func.count().label("count"))
+        .group_by(Conversion.mode)
         .order_by(desc("count"))
         .first()
     )
     most_used_mode = mode_row.mode if mode_row else None
 
-    # average time
-    avg_time = db.query(func.avg(models.Conversion.time_taken)).scalar() or 0
+    avg_time = db.query(func.avg(Conversion.time_taken)).scalar() or 0
     avg_time = round(avg_time, 2)
 
-    # most common image type
     type_row = (
-        db.query(models.Conversion.image_type, func.count().label("count"))
-        .group_by(models.Conversion.image_type)
+        db.query(Conversion.image_type, func.count().label("count"))
+        .group_by(Conversion.image_type)
         .order_by(desc("count"))
         .first()
     )
@@ -44,51 +41,50 @@ def get_summary(db: Session = Depends(get_db)):
 
 
 # -----------------------------------------
-# 2. MODE USAGE (bar chart)
+# 2. MODE USAGE
 # -----------------------------------------
 @router.get("/mode-usage")
 def mode_usage(db: Session = Depends(get_db)):
     rows = (
-        db.query(models.Conversion.mode, func.count().label("count"))
-        .group_by(models.Conversion.mode)
+        db.query(Conversion.mode, func.count().label("count"))
+        .group_by(Conversion.mode)
         .all()
     )
-
     return {mode: count for mode, count in rows}
 
 
 # -----------------------------------------
-# 3. DAILY TREND (line chart)
+# 3. DAILY TREND
 # -----------------------------------------
 @router.get("/daily-trend")
 def daily_trend(db: Session = Depends(get_db)):
-    date_expr = func.date(models.Conversion.timestamp)
+    date_expr = func.date(Conversion.created_at)   # FIXED
 
     rows = (
         db.query(
             date_expr.label("date"),
-            func.count(models.Conversion.id).label("count")
+            func.count(Conversion.id).label("count")
         )
         .group_by(date_expr)
         .order_by(date_expr)
         .all()
     )
-
     return [{"date": r.date, "count": r.count} for r in rows]
 
+
 # -----------------------------------------
-# 4. RECENT CONVERSIONS (table)
+# 4. RECENT
 # -----------------------------------------
 @router.get("/recent")
 def recent_conversions(db: Session = Depends(get_db)):
     rows = (
         db.query(
-            models.Conversion.image_name,
-            models.Conversion.mode,
-            models.Conversion.time_taken,
-            models.Conversion.timestamp,
+            Conversion.image_name,
+            Conversion.mode,
+            Conversion.time_taken,
+            Conversion.created_at,        # FIXED
         )
-        .order_by(models.Conversion.timestamp.desc())
+        .order_by(Conversion.created_at.desc())
         .limit(5)
         .all()
     )
@@ -98,10 +94,12 @@ def recent_conversions(db: Session = Depends(get_db)):
             "image_name": r.image_name,
             "mode": r.mode,
             "time_taken": round(r.time_taken, 3),
-            "timestamp": r.timestamp.isoformat()
+            "timestamp": r.created_at.isoformat()
         }
         for r in rows
     ]
+
+
 # -----------------------------------------
 # 5. TIME BY MODE
 # -----------------------------------------
@@ -109,84 +107,87 @@ def recent_conversions(db: Session = Depends(get_db)):
 def time_by_mode(db: Session = Depends(get_db)):
     rows = (
         db.query(
-            models.Conversion.mode,
-            func.avg(models.Conversion.time_taken).label("avg_time")
+            Conversion.mode,
+            func.avg(Conversion.time_taken).label("avg_time")
         )
-        .group_by(models.Conversion.mode)
+        .group_by(Conversion.mode)
         .all()
     )
-
     return [{"mode": mode, "avg_time": round(avg, 2)} for mode, avg in rows]
 
+
 # -----------------------------------------
-# 6. PEAK USAGE HOURS
+# 6. PEAK HOURS
 # -----------------------------------------
 @router.get("/peak-hours")
 def peak_hours(db: Session = Depends(get_db)):
     rows = (
         db.query(
-            func.strftime('%H', models.Conversion.timestamp).label("hour"),
+            func.strftime('%H', Conversion.created_at).label("hour"),   # FIXED
             func.count().label("count")
         )
         .group_by("hour")
         .order_by("hour")
         .all()
     )
-
     return [{"hour": hour, "count": count} for hour, count in rows]
+
+
 # -----------------------------------------
-# 7. IMAGE TYPE DISTRIBUTION
+# 7. IMAGE TYPES
 # -----------------------------------------
 @router.get("/image-types")
 def image_types(db: Session = Depends(get_db)):
     rows = (
         db.query(
-            models.Conversion.image_type,
+            Conversion.image_type,
             func.count().label("count")
         )
-        .group_by(models.Conversion.image_type)
+        .group_by(Conversion.image_type)
         .all()
     )
     return [{"type": t, "count": c} for t, c in rows]
+
+
 # -----------------------------------------
-# 8. FASTEST 5 CONVERSIONS
+# 8. FASTEST
 # -----------------------------------------
 @router.get("/fastest")
 def fastest_conversions(db: Session = Depends(get_db)):
     rows = (
-        db.query(models.Conversion)
-        .order_by(models.Conversion.time_taken.asc())
+        db.query(Conversion)
+        .order_by(Conversion.time_taken.asc())
         .limit(5)
         .all()
     )
-
     return [
         {
             "image_name": r.image_name,
             "mode": r.mode,
             "time": round(r.time_taken, 2),
-            "timestamp": r.timestamp
+            "timestamp": r.created_at   # FIXED
         }
         for r in rows
     ]
+
+
 # -----------------------------------------
-# 9. SLOWEST 5 CONVERSIONS
+# 9. SLOWEST
 # -----------------------------------------
 @router.get("/slowest")
 def slowest_conversions(db: Session = Depends(get_db)):
     rows = (
-        db.query(models.Conversion)
-        .order_by(models.Conversion.time_taken.desc())
+        db.query(Conversion)
+        .order_by(Conversion.time_taken.desc())
         .limit(5)
         .all()
     )
-
     return [
         {
             "image_name": r.image_name,
             "mode": r.mode,
             "time": round(r.time_taken, 2),
-            "timestamp": r.timestamp
+            "timestamp": r.created_at   # FIXED
         }
         for r in rows
     ]
