@@ -15,9 +15,9 @@ import {
 
 const DEFAULT_SUMMARY = {
   total_images: 0,
-  most_used_mode: "—",
+  most_used_mode: "--",
   avg_processing_time: 0,
-  common_image_type: "—",
+  common_image_type: "--",
 };
 
 const DEFAULT_MODE_USAGE = { vectorize: 1, outline: 1, enhance: 1 };
@@ -56,21 +56,29 @@ export default function Analytics() {
       fetch(`${API_BASE}/analytics/daily-trend`).then((r) => r.json()),
       fetch(`${API_BASE}/analytics/time-by-mode`).then((r) => r.json()),
       fetch(`${API_BASE}/analytics/peak-hours`).then((r) => r.json()),
-      fetch(`${API_BASE}/analytics/content-types`).then((r) => r.json()),
       fetch(`${API_BASE}/analytics/output-size-by-mode`).then((r) => r.json()),
+      fetch(`${API_BASE}/analytics/image-types`).then((r) => r.json()),
     ])
-      .then(([s, mu, dt, tbm, ph, ct, os]) => {
-        setSummary(s || DEFAULT_SUMMARY);
-        setModeUsage(mu || DEFAULT_MODE_USAGE);
-        setDailyTrend(dt || DEFAULT_DAILY);
-        setTimeByMode(tbm || DEFAULT_TIME_BY_MODE);
-        setPeakHours(ph || DEFAULT_PEAK);
-        setContentTypes(ct || []);
-        setOutputSizes(os || []);
+      .then(([s, mu, dt, tbm, ph, os, ct]) => {
+        setSummary(s && Object.keys(s).length ? s : DEFAULT_SUMMARY);
+        setModeUsage(mu && Object.keys(mu).length ? mu : DEFAULT_MODE_USAGE);
+        setDailyTrend(Array.isArray(dt) && dt.length ? dt : DEFAULT_DAILY);
+        setTimeByMode(Array.isArray(tbm) && tbm.length ? tbm : DEFAULT_TIME_BY_MODE);
+        setPeakHours(Array.isArray(ph) && ph.length ? ph : DEFAULT_PEAK);
+        setOutputSizes(Array.isArray(os) && os.length ? os : DEFAULT_TIME_BY_MODE.map(m => ({ mode: m.mode, avg_size: 0.05 })));
+        setContentTypes(Array.isArray(ct) && ct.length ? ct : [{ type: "graphic", count: 2 }, { type: "photo", count: 1 }]);
         setError("");
       })
       .catch((err) => {
         console.error("Analytics fetch error:", err);
+        // keep placeholders visible
+        setSummary(DEFAULT_SUMMARY);
+        setModeUsage(DEFAULT_MODE_USAGE);
+        setDailyTrend(DEFAULT_DAILY);
+        setTimeByMode(DEFAULT_TIME_BY_MODE);
+        setPeakHours(DEFAULT_PEAK);
+        setOutputSizes(DEFAULT_TIME_BY_MODE.map(m => ({ mode: m.mode, avg_size: 0.05 })));
+        setContentTypes([{ type: "graphic", count: 2 }, { type: "photo", count: 1 }]);
         setError("Live analytics unavailable. Showing placeholders.");
       })
       .finally(() => setLoading(false));
@@ -79,7 +87,7 @@ export default function Analytics() {
   const modeData = Object.entries(modeUsage).map(([name, value]) => ({ name, value }));
   const timeModeData = timeByMode.map((i) => ({ name: i.mode, value: i.avg_time }));
   const peakHourData = peakHours.map((i) => ({ name: i.hour, value: i.count }));
-  const contentTypeData = contentTypes.map((i) => ({ name: i.type, value: i.count, top_mode: i.top_mode }));
+  const contentTypeData = contentTypes.map((i) => ({ name: i.type, value: i.count }));
   const outputSizeData = outputSizes.map((i) => ({ name: i.mode, value: i.avg_size }));
 
   const COLORS = ["#4b8df8", "#34c9a3", "#845ec2"];
