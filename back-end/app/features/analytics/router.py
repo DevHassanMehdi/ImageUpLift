@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc
 from app.db import get_db
-from app.db.models import Conversion
+from app.db.models import Conversion, Recommendation
 
 router = APIRouter(prefix="/analytics", tags=["Analytics"])
 
@@ -106,16 +106,15 @@ def peak_hours(db: Session = Depends(get_db)):
 
 
 # -----------------------------------------
-# 7. IMAGE TYPES (via recommendation_json metadata.ai_image_type if present)
+# 7. IMAGE TYPES (via recommendations.metadata_json.ai_image_type)
 # -----------------------------------------
 @router.get("/image-types")
 def image_types(db: Session = Depends(get_db)):
-    rows = db.query(Conversion.recommendation_json).all()
+    rows = db.query(Recommendation.metadata_json).all()
     buckets = {}
-    for (rec,) in rows:
-        if not rec:
+    for (meta,) in rows:
+        if not meta:
             continue
-        meta = rec.get("metadata") or {}
         ctype = meta.get("ai_image_type") or "unknown"
         buckets[ctype] = buckets.get(ctype, 0) + 1
     return [{"type": t, "count": c} for t, c in buckets.items()]
