@@ -20,20 +20,6 @@ from app.db import models
 router = APIRouter(prefix="/conversion", tags=["Conversion"])
 
 
-def _ensure_image(db: Session, filename: str, blob: bytes, size_bytes: int):
-    """
-    Always create a new image row (no dedupe), storing minimal fields.
-    """
-    image = models.Image(
-        original_filename=filename or "upload",
-        size_bytes=size_bytes,
-        original_blob=blob,
-    )
-    db.add(image)
-    db.flush()
-    return image
-
-
 @router.get("/")
 def get_conversion_info():
     return {"message": "This is the conversion feature endpoint."}
@@ -45,9 +31,9 @@ async def options_convert():
 
 
 @router.post("/recommend")
-async def recommend_settings(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def recommend_settings(file: UploadFile = File(...)):
     """
-    Accepts an image file, extracts metadata, stores image + recommendation, and returns suggested settings.
+    Accepts an image file, extracts metadata, and returns suggested settings (no DB writes).
     """
     upload_bytes = await file.read()
     if not upload_bytes:
@@ -60,32 +46,8 @@ async def recommend_settings(file: UploadFile = File(...), db: Session = Depends
     try:
         metadata = extract_image_metadata(str(tmp_path))
         recommendation = recommend_conversion(metadata)
-
-        image = _ensure_image(
-            db=db,
-            filename=file.filename,
-            blob=upload_bytes,
-            size_bytes=len(upload_bytes),
-        )
-
-        rec_entry = models.Recommendation(
-            image_id=image.id,
-            recommended_mode=recommendation.get("conversion_mode"),
-            vector_params=recommendation.get("vector_settings"),
-            outline_params=recommendation.get("outline_settings"),
-            metadata_json=metadata,
-            confidence_score=recommendation.get("confidence"),
-        )
-        db.add(rec_entry)
-        db.commit()
-
-        return {
-            "image_id": image.id,
-            "metadata": metadata,
-            "recommendation": recommendation,
-        }
+        return {"metadata": metadata, "recommendation": recommendation}
     except Exception as e:
-        db.rollback()
         return JSONResponse(
             status_code=500,
             content={"error": "Failed to compute recommendation", "details": str(e)},
@@ -134,13 +96,18 @@ async def convert_image(
     output_mime = None
     device = "gpu" if torch.cuda.is_available() else "cpu"
     failure_reason = None
+    recommendation_json = None
 
-    image = _ensure_image(
-        db=db,
-        filename=file.filename,
-        blob=upload_bytes,
-        size_bytes=len(upload_bytes),
-    )
+    # Precompute recommendation/metadata to store alongside conversion
+    try:
+        metadata = extract_image_metadata(str(tmp_path))
+        recommendation = recommend_conversion(metadata)
+        recommendation_json = {
+            "metadata": metadata,
+            "recommendation": recommendation,
+        }
+    except Exception as e:
+        recommendation_json = {"error": str(e)}
 
     chosen_params = {
         "outputType": outputType,
@@ -271,13 +238,14 @@ async def convert_image(
 
         output_size = len(output_bytes) if output_bytes else None
         conv_entry = models.Conversion(
-            image_id=image.id,
+            image_id=None,
             image_name=file.filename or "upload",
             image_type=file.content_type,
             mode=outputType.lower(),
             time_taken=duration,
             device=device,
             chosen_params=chosen_params,
+            recommendation_json=recommendation_json,
             output_mime=output_mime,
             output_size_bytes=output_size,
             output_blob=output_bytes,
@@ -327,7 +295,6 @@ def list_conversions(limit: int = 50, mode: Optional[str] = None, db: Session = 
             "id": r.id,
             "image_name": r.image_name,
             "mode": r.mode,
-            "image_id": r.image_id,
             "chosen_params": r.chosen_params,
             "output_size_bytes": r.output_size_bytes,
             "output_mime": r.output_mime,
@@ -349,13 +316,12 @@ def conversion_detail(conversion_id: int, db: Session = Depends(get_db)):
         "id": conv.id,
         "image_name": conv.image_name,
         "mode": conv.mode,
-        "image_id": conv.image_id,
         "chosen_params": conv.chosen_params,
         "device": conv.device,
         "output_size_bytes": conv.output_size_bytes,
         "output_mime": conv.output_mime,
         "output_url": f"/conversion/output/{conv.id}",
-        "original_url": f"/conversion/original/{conv.image_id}" if conv.image_id else None,
+        "original_url": None,
     }
 
 
@@ -371,32 +337,12 @@ def get_conversion_output(conversion_id: int, db: Session = Depends(get_db)):
     return StreamingResponse(io.BytesIO(conv.output_blob), media_type=mime, headers=headers)
 
 
-@router.get("/original/{image_id}")
-def get_original_image(image_id: int, db: Session = Depends(get_db)):
-    image = db.query(models.Image).filter(models.Image.id == image_id).first()
-    if not image or not image.original_blob:
-        return JSONResponse(status_code=404, content={"error": "Original not found"})
-    headers = {"Content-Disposition": f'inline; filename="{image.original_filename}"'}
-    return StreamingResponse(io.BytesIO(image.original_blob), media_type="application/octet-stream", headers=headers)
-
-
 @router.delete("/{conversion_id}")
 def delete_conversion(conversion_id: int, db: Session = Depends(get_db)):
     conv = db.query(models.Conversion).filter(models.Conversion.id == conversion_id).first()
     if not conv:
         return JSONResponse(status_code=404, content={"error": "Conversion not found"})
-    image_id = conv.image_id
     db.delete(conv)
     db.commit()
-
-    # If the image is now orphaned (no conversions, no recommendations), remove it
-    if image_id:
-        remaining_conv = db.query(models.Conversion).filter(models.Conversion.image_id == image_id).count()
-        remaining_rec = db.query(models.Recommendation).filter(models.Recommendation.image_id == image_id).count()
-        if remaining_conv == 0 and remaining_rec == 0:
-            image = db.query(models.Image).filter(models.Image.id == image_id).first()
-            if image:
-                db.delete(image)
-                db.commit()
 
     return {"deleted": True, "id": conversion_id}

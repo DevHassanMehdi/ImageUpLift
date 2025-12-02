@@ -73,34 +73,6 @@ def daily_trend(db: Session = Depends(get_db)):
 
 
 # -----------------------------------------
-# 4. RECENT
-# -----------------------------------------
-@router.get("/recent")
-def recent_conversions(db: Session = Depends(get_db)):
-    rows = (
-        db.query(
-            Conversion.image_name,
-            Conversion.mode,
-            Conversion.time_taken,
-            Conversion.created_at,        # FIXED
-        )
-        .order_by(Conversion.created_at.desc())
-        .limit(5)
-        .all()
-    )
-
-    return [
-        {
-            "image_name": r.image_name,
-            "mode": r.mode,
-            "time_taken": round(r.time_taken, 3),
-            "timestamp": r.created_at.isoformat()
-        }
-        for r in rows
-    ]
-
-
-# -----------------------------------------
 # 5. TIME BY MODE
 # -----------------------------------------
 @router.get("/time-by-mode")
@@ -134,60 +106,38 @@ def peak_hours(db: Session = Depends(get_db)):
 
 
 # -----------------------------------------
-# 7. IMAGE TYPES
+# 7. IMAGE TYPES (via recommendation_json metadata.ai_image_type if present)
 # -----------------------------------------
 @router.get("/image-types")
 def image_types(db: Session = Depends(get_db)):
+    rows = db.query(Conversion.recommendation_json).all()
+    buckets = {}
+    for (rec,) in rows:
+        if not rec:
+            continue
+        meta = rec.get("metadata") or {}
+        ctype = meta.get("ai_image_type") or "unknown"
+        buckets[ctype] = buckets.get(ctype, 0) + 1
+    return [{"type": t, "count": c} for t, c in buckets.items()]
+
+
+# -----------------------------------------
+# 12. OUTPUT SIZE BY MODE
+# -----------------------------------------
+@router.get("/output-size-by-mode")
+def output_size_by_mode(db: Session = Depends(get_db)):
     rows = (
         db.query(
-            Conversion.image_type,
-            func.count().label("count")
+            Conversion.mode,
+            func.avg(Conversion.output_size_bytes).label("avg_size")
         )
-        .group_by(Conversion.image_type)
-        .all()
-    )
-    return [{"type": t, "count": c} for t, c in rows]
-
-
-# -----------------------------------------
-# 8. FASTEST
-# -----------------------------------------
-@router.get("/fastest")
-def fastest_conversions(db: Session = Depends(get_db)):
-    rows = (
-        db.query(Conversion)
-        .order_by(Conversion.time_taken.asc())
-        .limit(5)
+        .group_by(Conversion.mode)
         .all()
     )
     return [
-        {
-            "image_name": r.image_name,
-            "mode": r.mode,
-            "time": round(r.time_taken, 2),
-            "timestamp": r.created_at   # FIXED
-        }
-        for r in rows
+        {"mode": mode, "avg_size": round((avg or 0) / (1024 * 1024), 3)}  # MB
+        for mode, avg in rows
     ]
 
 
 # -----------------------------------------
-# 9. SLOWEST
-# -----------------------------------------
-@router.get("/slowest")
-def slowest_conversions(db: Session = Depends(get_db)):
-    rows = (
-        db.query(Conversion)
-        .order_by(Conversion.time_taken.desc())
-        .limit(5)
-        .all()
-    )
-    return [
-        {
-            "image_name": r.image_name,
-            "mode": r.mode,
-            "time": round(r.time_taken, 2),
-            "timestamp": r.created_at   # FIXED
-        }
-        for r in rows
-    ]
