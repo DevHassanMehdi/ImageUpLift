@@ -91,8 +91,8 @@ export default function Gallery() {
           </div>
         </div>
         {error && <div className="alert alert-error" style={{ marginTop: 12 }}>{error}</div>}
-        {!loading && !error && items.length === 0 && (
-          <div className="muted" style={{ marginTop: 16 }}>No conversions yet.</div>
+        {!loading && items.length === 0 && (
+          <div className="muted" style={{ marginTop: 16 }}>{error ? 'No data available.' : 'No conversions yet.'}</div>
         )}
       </div>
 
@@ -106,7 +106,7 @@ export default function Gallery() {
           }}
         >
           {items.map(item => {
-            const thumbUrl = `${API_BASE}/conversion/output/${item.id}`;
+            const thumbUrl = item.output_size_bytes ? `${API_BASE}/conversion/output/${item.id}` : '/logo.svg';
             const badge = item.mode ? item.mode.toUpperCase() : 'OUTPUT';
             const mime = item.output_mime || '';
             return (
