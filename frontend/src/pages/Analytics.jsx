@@ -14,56 +14,81 @@ import {
   Line,
 } from "recharts";
 
+const DEFAULT_SUMMARY = {
+  total_images: 0,
+  most_used_mode: "—",
+  avg_processing_time: 0,
+  common_image_type: "—",
+};
+
+const DEFAULT_MODE_USAGE = { vectorize: 1, outline: 1, enhance: 1 };
+const DEFAULT_DAILY = [
+  { date: "2025-11-20", count: 1 },
+  { date: "2025-11-21", count: 2 },
+  { date: "2025-11-22", count: 3 },
+];
+const DEFAULT_TYPES = [
+  { type: "image/png", count: 2 },
+  { type: "image/jpeg", count: 1 },
+];
+const DEFAULT_TIME_BY_MODE = [
+  { mode: "vectorize", avg_time: 1.2 },
+  { mode: "outline", avg_time: 0.8 },
+  { mode: "enhance", avg_time: 5.5 },
+];
+const DEFAULT_PEAK = [
+  { hour: "09", count: 1 },
+  { hour: "14", count: 2 },
+  { hour: "20", count: 1 },
+];
+const DEFAULT_FAST_SLOW = [
+  { image_name: "sample.svg", mode: "vectorize", time: 1.1, timestamp: "2025-11-22" },
+];
+
 export default function Analytics() {
-  const [summary, setSummary] = useState(null);
-  const [modeUsage, setModeUsage] = useState(null);
-  const [dailyTrend, setDailyTrend] = useState(null);
-  const [imageTypes, setImageTypes] = useState(null);
-  const [timeByMode, setTimeByMode] = useState(null);
-  const [peakHours, setPeakHours] = useState(null);
-  const [fastest, setFastest] = useState(null);
-  const [slowest, setSlowest] = useState(null);
-  const [recent, setRecent] = useState(null);
+  const [summary, setSummary] = useState(DEFAULT_SUMMARY);
+  const [modeUsage, setModeUsage] = useState(DEFAULT_MODE_USAGE);
+  const [dailyTrend, setDailyTrend] = useState(DEFAULT_DAILY);
+  const [imageTypes, setImageTypes] = useState(DEFAULT_TYPES);
+  const [timeByMode, setTimeByMode] = useState(DEFAULT_TIME_BY_MODE);
+  const [peakHours, setPeakHours] = useState(DEFAULT_PEAK);
+  const [fastest, setFastest] = useState(DEFAULT_FAST_SLOW);
+  const [slowest, setSlowest] = useState(DEFAULT_FAST_SLOW);
+  const [recent, setRecent] = useState(DEFAULT_FAST_SLOW);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   useEffect(() => {
+    const API_BASE = process.env.REACT_APP_API_BASE_URL || "http://localhost:5001";
     Promise.all([
-      fetch("http://localhost:5001/analytics/summary").then((r) => r.json()),
-      fetch("http://localhost:5001/analytics/mode-usage").then((r) => r.json()),
-      fetch("http://localhost:5001/analytics/daily-trend").then((r) => r.json()),
-      fetch("http://localhost:5001/analytics/image-types").then((r) => r.json()),
-      fetch("http://localhost:5001/analytics/time-by-mode").then((r) => r.json()),
-      fetch("http://localhost:5001/analytics/peak-hours").then((r) => r.json()),
-      fetch("http://localhost:5001/analytics/fastest").then((r) => r.json()),
-      fetch("http://localhost:5001/analytics/slowest").then((r) => r.json()),
-      fetch("http://localhost:5001/analytics/recent").then((r) => r.json()),
+      fetch(`${API_BASE}/analytics/summary`).then((r) => r.json()),
+      fetch(`${API_BASE}/analytics/mode-usage`).then((r) => r.json()),
+      fetch(`${API_BASE}/analytics/daily-trend`).then((r) => r.json()),
+      fetch(`${API_BASE}/analytics/image-types`).then((r) => r.json()),
+      fetch(`${API_BASE}/analytics/time-by-mode`).then((r) => r.json()),
+      fetch(`${API_BASE}/analytics/peak-hours`).then((r) => r.json()),
+      fetch(`${API_BASE}/analytics/fastest`).then((r) => r.json()),
+      fetch(`${API_BASE}/analytics/slowest`).then((r) => r.json()),
+      fetch(`${API_BASE}/analytics/recent`).then((r) => r.json()),
     ])
       .then(([s, mu, dt, it, tbm, ph, fa, sl, rc]) => {
-        setSummary(s);
-        setModeUsage(mu);
-        setDailyTrend(dt);
-        setImageTypes(it);
-        setTimeByMode(tbm);
-        setPeakHours(ph);
-        setFastest(fa);
-        setSlowest(sl);
-        setRecent(rc);
+        setSummary(s || DEFAULT_SUMMARY);
+        setModeUsage(mu || DEFAULT_MODE_USAGE);
+        setDailyTrend(dt || DEFAULT_DAILY);
+        setImageTypes(it || DEFAULT_TYPES);
+        setTimeByMode(tbm || DEFAULT_TIME_BY_MODE);
+        setPeakHours(ph || DEFAULT_PEAK);
+        setFastest(fa || DEFAULT_FAST_SLOW);
+        setSlowest(sl || DEFAULT_FAST_SLOW);
+        setRecent(rc || DEFAULT_FAST_SLOW);
+        setError("");
       })
-      .catch((err) => console.error("Analytics fetch error:", err));
+      .catch((err) => {
+        console.error("Analytics fetch error:", err);
+        setError("Live analytics unavailable. Showing placeholders.");
+      })
+      .finally(() => setLoading(false));
   }, []);
-
-  if (
-    !summary ||
-    !modeUsage ||
-    !dailyTrend ||
-    !imageTypes ||
-    !timeByMode ||
-    !peakHours ||
-    !fastest ||
-    !slowest ||
-    !recent
-  ) {
-    return <p style={{ padding: 20 }}>Loading analytics...</p>;
-  }
 
   /* ---------------- DATA FORMAT ---------------- */
   const modeData = Object.entries(modeUsage).map(([name, value]) => ({
@@ -85,7 +110,9 @@ export default function Analytics() {
 
   return (
     <div style={{ padding: 24 }}>
-      <h1 style={{ marginBottom: 30 }}>Analytics Dashboard</h1>
+      <h1 style={{ marginBottom: 6 }}>Analytics Dashboard</h1>
+      {loading && <p className="muted" style={{ marginTop: 0 }}>Loading live data...</p>}
+      {error && <div className="alert alert-error" style={{ marginBottom: 12 }}>{error}</div>}
 
       {/* ---------------- SUMMARY CARDS ---------------- */}
       <div
