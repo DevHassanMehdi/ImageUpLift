@@ -37,6 +37,13 @@ Ensure the weights exist:
 - `app/weights/RealESRGAN_x4plus.pth`
 The setup script will warn if missing.
 
+Seed dummy data (SQLite) for gallery/analytics:
+```bash
+cd back-end
+conda activate imageuplift
+python -m app.db.create_db   # recreates app/db/imageuplift.db with sample images/recommendations/conversions
+```
+
 Run API:
 ```bash
 uvicorn app.main:app --reload --port 5001
