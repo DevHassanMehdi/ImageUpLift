@@ -4,7 +4,6 @@ import {
   Pie,
   Cell,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   BarChart,
   Bar,
@@ -27,10 +26,6 @@ const DEFAULT_DAILY = [
   { date: "2025-11-21", count: 2 },
   { date: "2025-11-22", count: 3 },
 ];
-const DEFAULT_TYPES = [
-  { type: "image/png", count: 2 },
-  { type: "image/jpeg", count: 1 },
-];
 const DEFAULT_TIME_BY_MODE = [
   { mode: "vectorize", avg_time: 1.2 },
   { mode: "outline", avg_time: 0.8 },
@@ -41,20 +36,15 @@ const DEFAULT_PEAK = [
   { hour: "14", count: 2 },
   { hour: "20", count: 1 },
 ];
-const DEFAULT_FAST_SLOW = [
-  { image_name: "sample.svg", mode: "vectorize", time: 1.1, timestamp: "2025-11-22" },
-];
 
 export default function Analytics() {
   const [summary, setSummary] = useState(DEFAULT_SUMMARY);
   const [modeUsage, setModeUsage] = useState(DEFAULT_MODE_USAGE);
   const [dailyTrend, setDailyTrend] = useState(DEFAULT_DAILY);
-  const [imageTypes, setImageTypes] = useState(DEFAULT_TYPES);
   const [timeByMode, setTimeByMode] = useState(DEFAULT_TIME_BY_MODE);
   const [peakHours, setPeakHours] = useState(DEFAULT_PEAK);
-  const [fastest, setFastest] = useState(DEFAULT_FAST_SLOW);
-  const [slowest, setSlowest] = useState(DEFAULT_FAST_SLOW);
-  const [recent, setRecent] = useState(DEFAULT_FAST_SLOW);
+  const [contentTypes, setContentTypes] = useState([]);
+  const [outputSizes, setOutputSizes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -64,23 +54,19 @@ export default function Analytics() {
       fetch(`${API_BASE}/analytics/summary`).then((r) => r.json()),
       fetch(`${API_BASE}/analytics/mode-usage`).then((r) => r.json()),
       fetch(`${API_BASE}/analytics/daily-trend`).then((r) => r.json()),
-      fetch(`${API_BASE}/analytics/image-types`).then((r) => r.json()),
       fetch(`${API_BASE}/analytics/time-by-mode`).then((r) => r.json()),
       fetch(`${API_BASE}/analytics/peak-hours`).then((r) => r.json()),
-      fetch(`${API_BASE}/analytics/fastest`).then((r) => r.json()),
-      fetch(`${API_BASE}/analytics/slowest`).then((r) => r.json()),
-      fetch(`${API_BASE}/analytics/recent`).then((r) => r.json()),
+      fetch(`${API_BASE}/analytics/content-types`).then((r) => r.json()),
+      fetch(`${API_BASE}/analytics/output-size-by-mode`).then((r) => r.json()),
     ])
-      .then(([s, mu, dt, it, tbm, ph, fa, sl, rc]) => {
+      .then(([s, mu, dt, tbm, ph, ct, os]) => {
         setSummary(s || DEFAULT_SUMMARY);
         setModeUsage(mu || DEFAULT_MODE_USAGE);
         setDailyTrend(dt || DEFAULT_DAILY);
-        setImageTypes(it || DEFAULT_TYPES);
         setTimeByMode(tbm || DEFAULT_TIME_BY_MODE);
         setPeakHours(ph || DEFAULT_PEAK);
-        setFastest(fa || DEFAULT_FAST_SLOW);
-        setSlowest(sl || DEFAULT_FAST_SLOW);
-        setRecent(rc || DEFAULT_FAST_SLOW);
+        setContentTypes(ct || []);
+        setOutputSizes(os || []);
         setError("");
       })
       .catch((err) => {
@@ -90,22 +76,12 @@ export default function Analytics() {
       .finally(() => setLoading(false));
   }, []);
 
-  /* ---------------- DATA FORMAT ---------------- */
-  const modeData = Object.entries(modeUsage).map(([name, value]) => ({
-    name,
-    value,
-  }));
-  const typeData = imageTypes.map((i) => ({ name: i.type, value: i.count }));
-  const timeModeData = timeByMode.map((i) => ({
-    name: i.mode,
-    value: i.avg_time,
-  }));
-  const peakHourData = peakHours.map((i) => ({
-    name: i.hour,
-    value: i.count,
-  }));
+  const modeData = Object.entries(modeUsage).map(([name, value]) => ({ name, value }));
+  const timeModeData = timeByMode.map((i) => ({ name: i.mode, value: i.avg_time }));
+  const peakHourData = peakHours.map((i) => ({ name: i.hour, value: i.count }));
+  const contentTypeData = contentTypes.map((i) => ({ name: i.type, value: i.count, top_mode: i.top_mode }));
+  const outputSizeData = outputSizes.map((i) => ({ name: i.mode, value: i.avg_size }));
 
-  // For pies: enhance, outline, vectorize → blue, teal, purple
   const COLORS = ["#4b8df8", "#34c9a3", "#845ec2"];
 
   return (
@@ -114,7 +90,6 @@ export default function Analytics() {
       {loading && <p className="muted" style={{ marginTop: 0 }}>Loading live data...</p>}
       {error && <div className="alert alert-error" style={{ marginBottom: 12 }}>{error}</div>}
 
-      {/* ---------------- SUMMARY CARDS ---------------- */}
       <div
         style={{
           display: "grid",
@@ -125,102 +100,44 @@ export default function Analytics() {
       >
         <SummaryCard title="Total Images" value={summary.total_images} />
         <SummaryCard title="Most Used Mode" value={summary.most_used_mode} />
-        <SummaryCard
-          title="Avg Processing Time"
-          value={summary.avg_processing_time + "s"}
-        />
+        <SummaryCard title="Avg Processing Time" value={`${summary.avg_processing_time}s`} />
         <SummaryCard title="Most Common Type" value={summary.common_image_type} />
       </div>
 
-      {/* ---------------- FIVE CHARTS IN A ROW ---------------- */}
       <div
         style={{
-          display: "flex",
-          justifyContent: "space-between",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
           gap: 16,
-          marginBottom: 40,
+          marginTop: 12,
         }}
       >
-        {/* PIE 1 - Mode Usage */}
-        <ChartBox title="Mode Usage" width={220}>
-          <ResponsiveContainer width="100%" height={210}>
+        <ChartBox title="Mode Usage">
+          <ResponsiveContainer width="100%" height={240}>
             <PieChart>
-              <Pie data={modeData} outerRadius={60} dataKey="value" label>
+              <Pie data={modeData} outerRadius={70} dataKey="value" label>
                 {modeData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
               <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
             </PieChart>
           </ResponsiveContainer>
         </ChartBox>
 
-        {/* PIE 2 - Image Type */}
-        <ChartBox title="Image Types" width={220}>
-          <ResponsiveContainer width="100%" height={210}>
-            <PieChart>
-              <Pie data={typeData} outerRadius={60} dataKey="value" label>
-                {typeData.map((_, i) => (
-                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend wrapperStyle={{ fontSize: 10 }} />
-            </PieChart>
-          </ResponsiveContainer>
-        </ChartBox>
-
-        {/* LINE - Daily Trend */}
-        <ChartBox title="Daily Trend" width={220}>
-          <ResponsiveContainer width="100%" height={210}>
-            <LineChart data={dailyTrend}>
-              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
-              <YAxis
-                allowDecimals={false}
-                tick={{ fontSize: 10 }}
-                domain={[0, "dataMax + 1"]}
-                label={{
-                  value: "Conversions",
-                  angle: -90,
-                  position: "insideLeft",
-                  style: { fontSize: 11, fill: "#666" },
-                }}
-              />
-              <Tooltip />
-              <Line dataKey="count" stroke="#4b8df8" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
-        </ChartBox>
-
-        {/* BAR 1 - Time by Mode */}
-        <ChartBox title="Time by Mode" width={220}>
-          <ResponsiveContainer width="100%" height={210}>
-            <BarChart
-              data={timeModeData}
-              margin={{ top: 10, right: 0, left: 0, bottom: 0 }}
-              barCategoryGap={20}
-            >
+        <ChartBox title="Time by Mode">
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={timeModeData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }} barCategoryGap={20}>
               <XAxis dataKey="name" tick={{ fontSize: 10 }} />
               <YAxis
                 tick={{ fontSize: 10 }}
-                label={{
-                  value: "Seconds",
-                  angle: -90,
-                  position: "insideLeft",
-                  style: { fontSize: 11, fill: "#666" },
-                }}
+                label={{ value: "Seconds", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#666" } }}
               />
               <Tooltip />
-              <Bar dataKey="value" barSize={40} radius={[6, 6, 0, 0]}> 
+              <Bar dataKey="value" barSize={40} radius={[6, 6, 0, 0]}>
                 {timeModeData.map((entry, i) => {
                   const m = (entry.name || "").toLowerCase();
-                  const color =
-                    m === "enhance"
-                      ? "#4b8df8"
-                      : m === "outline"
-                      ? "#34c9a3"
-                      : "#845ec2";
+                  const color = m === "enhance" ? "#4b8df8" : m === "outline" ? "#34c9a3" : "#845ec2";
                   return <Cell key={`cell-time-${i}`} fill={color} />;
                 })}
               </Bar>
@@ -228,29 +145,75 @@ export default function Analytics() {
           </ResponsiveContainer>
         </ChartBox>
 
-        {/* BAR 2 - Peak Hours */}
-        <ChartBox title="Peak Hours" width={220}>
-          <ResponsiveContainer width="100%" height={210}>
+        <ChartBox title="Avg Output Size by Mode (MB)">
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={outputSizeData}>
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis tick={{ fontSize: 11 }} />
+              <Tooltip />
+              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                {outputSizeData.map((entry, i) => {
+                  const m = (entry.name || "").toLowerCase();
+                  const color = m === "enhance" ? "#4b8df8" : m === "outline" ? "#34c9a3" : "#845ec2";
+                  return <Cell key={`cell-size-${i}`} fill={color} />;
+                })}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartBox>
+
+        <ChartBox title="Content Types (AI)">
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={contentTypeData}>
+              <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
+              <Tooltip />
+              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+                {contentTypeData.map((_, i) => (
+                  <Cell key={`cell-ctype-${i}`} fill={COLORS[i % COLORS.length]} />
+                ))}
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartBox>
+      </div>
+
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: 16,
+          marginTop: 20,
+        }}
+      >
+        <ChartBox title="Daily Trend">
+          <ResponsiveContainer width="100%" height={250}>
+            <LineChart data={dailyTrend}>
+              <XAxis dataKey="date" tick={{ fontSize: 10 }} />
+              <YAxis
+                allowDecimals={false}
+                tick={{ fontSize: 10 }}
+                domain={[0, "dataMax + 1"]}
+                label={{ value: "Conversions", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#666" } }}
+              />
+              <Tooltip />
+              <Line dataKey="count" stroke="#4b8df8" strokeWidth={2} />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartBox>
+
+        <ChartBox title="Peak Hours">
+          <ResponsiveContainer width="100%" height={250}>
             <BarChart data={peakHourData}>
               <XAxis
                 dataKey="name"
                 tick={{ fontSize: 10 }}
-                label={{
-                  value: "Hour of day",
-                  position: "insideBottom",
-                  offset: -5,
-                  style: { fontSize: 11, fill: "#666" },
-                }}
+                label={{ value: "Hour of day", position: "insideBottom", offset: -5, style: { fontSize: 11, fill: "#666" } }}
               />
               <YAxis
                 allowDecimals={false}
                 tick={{ fontSize: 10 }}
-                label={{
-                  value: "Conversions",
-                  angle: -90,
-                  position: "insideLeft",
-                  style: { fontSize: 11, fill: "#666" },
-                }}
+                label={{ value: "Conversions", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#666" } }}
               />
               <Tooltip />
               <Bar dataKey="value" fill="#ff6b6b" radius={[6, 6, 0, 0]} />
@@ -258,32 +221,9 @@ export default function Analytics() {
           </ResponsiveContainer>
         </ChartBox>
       </div>
-
-      {/* ---------------- THREE TABLES ---------------- */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr 1fr",
-          gap: 24,
-        }}
-      >
-        <ChartBox title="Fastest">
-          <Table list={fastest} />
-        </ChartBox>
-
-        <ChartBox title="Slowest">
-          <Table list={slowest} />
-        </ChartBox>
-
-        <ChartBox title="Recent">
-          <Table list={recent} />
-        </ChartBox>
-      </div>
     </div>
   );
 }
-
-/* ---------------- COMPONENTS ---------------- */
 
 function SummaryCard({ title, value }) {
   return (
@@ -317,51 +257,3 @@ function ChartBox({ title, children, width }) {
     </div>
   );
 }
-
-function Table({ list }) {
-  return (
-    <table
-      style={{
-        width: "100%",
-        borderCollapse: "collapse",
-        fontSize: "13px",
-      }}
-    >
-      <thead style={{ background: "#f3f3f3" }}>
-        <tr>
-          <th style={th}>Image</th>
-          <th style={th}>Mode</th>
-          <th style={th}>Time</th>
-          <th style={th}>Date</th>
-        </tr>
-      </thead>
-      <tbody>
-        {list.map((item, i) => (
-          <tr key={i}>
-            <td style={td}>{item.image_name || "--"}</td>
-            <td style={td}>{item.mode || "--"}</td>
-            <td style={td}>
-              {item.time
-                ? item.time.toFixed(2) + "s"
-                : item.time_taken
-                ? item.time_taken.toFixed(2) + "s"
-                : "--"}
-            </td>
-            <td style={td}>{item.timestamp?.split("T")[0] || "--"}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-}
-
-const th = {
-  padding: 8,
-  textAlign: "left",
-  borderBottom: "1px solid #ddd",
-};
-
-const td = {
-  padding: 8,
-  borderBottom: "1px solid #eee",
-};
