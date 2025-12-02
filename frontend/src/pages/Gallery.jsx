@@ -106,7 +106,8 @@ export default function Gallery() {
           }}
         >
           {items.map(item => {
-            const thumbUrl = item.output_size_bytes ? `${API_BASE}/conversion/output/${item.id}` : '/logo.svg';
+            const hasThumb = item.output_size_bytes && item.output_size_bytes > 0 && item.output_mime;
+            const thumbUrl = hasThumb ? `${API_BASE}/conversion/output/${item.id}` : '/logo.svg';
             const badge = item.mode ? item.mode.toUpperCase() : 'OUTPUT';
             const mime = item.output_mime || '';
             return (
@@ -128,6 +129,11 @@ export default function Gallery() {
                     src={thumbUrl}
                     alt={item.image_name || 'Converted'}
                     loading="lazy"
+                    onError={(e) => {
+                      if (e.target.dataset.fallback) return;
+                      e.target.dataset.fallback = '1';
+                      e.target.src = '/logo.svg';
+                    }}
                     style={{ width: '100%', height: 200, objectFit: 'contain' }}
                   />
                   <div style={{ position: 'absolute', top: 8, left: 8, display: 'flex', gap: 6 }}>

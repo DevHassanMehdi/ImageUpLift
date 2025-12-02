@@ -65,11 +65,11 @@ def main():
                 output_size = random.randint(10_000, 120_000)
             elif mode == "outline":
                 params = {"low": random.randint(50, 150), "high": random.randint(160, 260)}
-                output_mime = "image/svg+xml"
+                output_mime = None  # keep null to force logo fallback in gallery
                 output_size = random.randint(8_000, 90_000)
             else:  # enhance
                 params = {"scale": random.choice([2, 4]), "denoise": random.choice([0, 1])}
-                output_mime = random.choice(["image/png", "image/webp"])
+                output_mime = None  # keep null to force logo fallback in gallery
                 output_size = random.randint(80_000, 500_000)
 
             recommendation_json = {
