@@ -21,17 +21,17 @@ router = APIRouter(prefix="/conversion", tags=["Conversion"])
 
 
 def _ensure_image(db: Session, filename: str, blob: bytes, size_bytes: int):
-    """
-    Always create a new image row (no dedupe), storing minimal fields.
-    """
-    image = models.Image(
-        original_filename=filename or "upload",
-        size_bytes=size_bytes,
-        original_blob=blob,
-    )
-    db.add(image)
-    db.flush()
-    return image
+  """
+  Create an image row for the upload.
+  """
+  image = models.Image(
+      original_filename=filename or "upload",
+      size_bytes=size_bytes,
+      original_blob=blob,
+  )
+  db.add(image)
+  db.flush()
+  return image
 
 
 @router.get("/")
@@ -79,11 +79,7 @@ async def recommend_settings(file: UploadFile = File(...), db: Session = Depends
         db.add(rec_entry)
         db.commit()
 
-        return {
-            "image_id": image.id,
-            "metadata": metadata,
-            "recommendation": recommendation,
-        }
+        return {"image_id": image.id, "metadata": metadata, "recommendation": recommendation}
     except Exception as e:
         db.rollback()
         return JSONResponse(
@@ -135,6 +131,7 @@ async def convert_image(
     device = "gpu" if torch.cuda.is_available() else "cpu"
     failure_reason = None
 
+    # Store original in images table
     image = _ensure_image(
         db=db,
         filename=file.filename,
@@ -373,11 +370,11 @@ def get_conversion_output(conversion_id: int, db: Session = Depends(get_db)):
 
 @router.get("/original/{image_id}")
 def get_original_image(image_id: int, db: Session = Depends(get_db)):
-    image = db.query(models.Image).filter(models.Image.id == image_id).first()
-    if not image or not image.original_blob:
+    img = db.query(models.Image).filter(models.Image.id == image_id).first()
+    if not img or not img.original_blob:
         return JSONResponse(status_code=404, content={"error": "Original not found"})
-    headers = {"Content-Disposition": f'inline; filename="{image.original_filename}"'}
-    return StreamingResponse(io.BytesIO(image.original_blob), media_type="application/octet-stream", headers=headers)
+    headers = {"Content-Disposition": f'inline; filename="{img.original_filename}"'}
+    return StreamingResponse(io.BytesIO(img.original_blob), media_type="application/octet-stream", headers=headers)
 
 
 @router.delete("/{conversion_id}")
@@ -385,18 +382,7 @@ def delete_conversion(conversion_id: int, db: Session = Depends(get_db)):
     conv = db.query(models.Conversion).filter(models.Conversion.id == conversion_id).first()
     if not conv:
         return JSONResponse(status_code=404, content={"error": "Conversion not found"})
-    image_id = conv.image_id
     db.delete(conv)
     db.commit()
-
-    # If the image is now orphaned (no conversions, no recommendations), remove it
-    if image_id:
-        remaining_conv = db.query(models.Conversion).filter(models.Conversion.image_id == image_id).count()
-        remaining_rec = db.query(models.Recommendation).filter(models.Recommendation.image_id == image_id).count()
-        if remaining_conv == 0 and remaining_rec == 0:
-            image = db.query(models.Image).filter(models.Image.id == image_id).first()
-            if image:
-                db.delete(image)
-                db.commit()
 
     return {"deleted": True, "id": conversion_id}

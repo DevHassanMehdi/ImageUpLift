@@ -16,7 +16,6 @@ class Image(Base):
     original_filename = Column(String, nullable=False)
     size_bytes = Column(Integer, nullable=True)
     original_blob = Column(LargeBinary, nullable=True)
-    # Optional helper to know when row was created
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
@@ -59,7 +58,6 @@ class Conversion(Base):
     output_mime = Column(String, nullable=True)
     output_size_bytes = Column(Integer, nullable=True)
     output_thumb_blob = Column(LargeBinary, nullable=True)
-    # Optional created timestamp for ordering
     created_at = Column(
         DateTime(timezone=True),
         server_default=func.now(),
