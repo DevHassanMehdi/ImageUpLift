@@ -108,8 +108,11 @@ export default function Gallery() {
       <GalleryFilterBar
         filterMode={filterMode}
         onChangeFilter={handleFilterChange}
-        onRefresh={() => loadItems(filterMode, page)}
         loading={loading}
+        page={page}
+        totalPages={totalPages}
+        onPrevPage={() => goToPage(page - 1)}
+        onNextPage={() => goToPage(page + 1)}
       />
 
       {error && <div className="alert alert-error" style={{ marginTop: 12 }}>{error}</div>}
@@ -118,23 +121,12 @@ export default function Gallery() {
       )}
 
       {!loading && items.length > 0 && (
-        <>
-          <GalleryGrid
-            items={items}
-            apiBase={API_BASE}
-            onOpen={handleOpen}
-            onDelete={handleDelete}
-          />
-          <div className="gallery-pagination" style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button className="btn btn-secondary" onClick={() => goToPage(page - 1)} disabled={page <= 1}>
-              Previous
-            </button>
-            <span className="muted">Page {page} of {totalPages}</span>
-            <button className="btn btn-secondary" onClick={() => goToPage(page + 1)} disabled={page >= totalPages}>
-              Next
-            </button>
-          </div>
-        </>
+        <GalleryGrid
+          items={items}
+          apiBase={API_BASE}
+          onOpen={handleOpen}
+          onDelete={handleDelete}
+        />
       )}
     </div>
   );
