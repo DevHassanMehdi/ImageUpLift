@@ -51,7 +51,9 @@ export default function Analytics() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const API_BASE = process.env.REACT_APP_API_BASE_URL || "http://localhost:5001";
+    const API_BASE =
+      process.env.REACT_APP_API_BASE_URL ||
+      (process.env.NODE_ENV === "production" ? "" : "http://localhost:5001");
     Promise.all([
       fetch(`${API_BASE}/analytics/summary`).then((r) => r.json()),
       fetch(`${API_BASE}/analytics/mode-usage`).then((r) => r.json()),

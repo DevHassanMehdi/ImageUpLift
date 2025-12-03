@@ -6,7 +6,9 @@ import SettingsPanel from '../components/SettingsPanel';
 import ImageInsights from '../components/ImageInsights';
 import Toasts from '../components/Toast';
 
-const API_BASE = process.env.REACT_APP_API_BASE_URL || 'http://localhost:5001';
+const API_BASE =
+  process.env.REACT_APP_API_BASE_URL ||
+  (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5001');
 
 export default function Convert() {
   const [searchParams, setSearchParams] = useSearchParams();
