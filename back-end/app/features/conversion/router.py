@@ -2,6 +2,7 @@ import io
 import os
 import tempfile
 import time
+from math import ceil
 from pathlib import Path
 from typing import Optional
 
@@ -306,20 +307,35 @@ async def convert_image(
 
 
 @router.get("/list")
-def list_conversions(limit: int = 50, mode: Optional[str] = None, db: Session = Depends(get_db)):
+def list_conversions(
+    limit: int = 50,
+    mode: Optional[str] = None,
+    page: int = 1,
+    page_size: int = 10,
+    db: Session = Depends(get_db),
+):
     """
     Returns a paginated list of recent conversions for gallery/analytics use.
     Optional filter by mode.
     """
+    if page < 1:
+        page = 1
+    # keep a hard safety cap but default to 10 for gallery UI
+    max_page_size = min(limit if limit > 0 else 200, 200)
+    page_size = max(1, min(page_size or 10, max_page_size))
+
     q = db.query(models.Conversion)
     if mode:
         q = q.filter(func.lower(models.Conversion.mode) == mode.lower())
+
+    total = q.count()
     rows = (
         q.order_by(desc(models.Conversion.created_at))
-        .limit(min(limit, 200))
+        .offset((page - 1) * page_size)
+        .limit(page_size)
         .all()
     )
-    return [
+    items = [
         {
             "id": r.id,
             "image_name": r.image_name,
@@ -331,6 +347,8 @@ def list_conversions(limit: int = 50, mode: Optional[str] = None, db: Session = 
         }
         for r in rows
     ]
+    total_pages = ceil(total / page_size) if page_size else 0
+    return {"items": items, "meta": {"total": total, "page": page, "page_size": page_size, "total_pages": total_pages}}
 
 
 @router.get("/detail/{conversion_id}")
