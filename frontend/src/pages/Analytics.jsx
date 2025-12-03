@@ -91,6 +91,7 @@ export default function Analytics() {
   const outputSizeData = outputSizes.map((i) => ({ name: i.mode, value: i.avg_size }));
 
   const COLORS = ["#4b8df8", "#34c9a3", "#845ec2"];
+  const ANIM_DURATION = 2000; // slightly quicker animations (~0.5s faster)
 
   return (
     <div style={{ padding: 24 }}>
@@ -123,7 +124,7 @@ export default function Analytics() {
         <ChartBox title="Mode Usage">
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
-              <Pie data={modeData} outerRadius={70} dataKey="value" label>
+              <Pie data={modeData} outerRadius={70} dataKey="value" label animationDuration={ANIM_DURATION}>
                 {modeData.map((_, i) => (
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
@@ -142,7 +143,7 @@ export default function Analytics() {
                 label={{ value: "Seconds", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#666" } }}
               />
               <Tooltip />
-              <Bar dataKey="value" barSize={40} radius={[6, 6, 0, 0]}>
+              <Bar dataKey="value" barSize={40} radius={[6, 6, 0, 0]} animationDuration={ANIM_DURATION}>
                 {timeModeData.map((entry, i) => {
                   const m = (entry.name || "").toLowerCase();
                   const color = m === "enhance" ? "#4b8df8" : m === "outline" ? "#34c9a3" : "#845ec2";
@@ -159,7 +160,7 @@ export default function Analytics() {
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
               <Tooltip />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+              <Bar dataKey="value" radius={[6, 6, 0, 0]} animationDuration={ANIM_DURATION}>
                 {outputSizeData.map((entry, i) => {
                   const m = (entry.name || "").toLowerCase();
                   const color = m === "enhance" ? "#4b8df8" : m === "outline" ? "#34c9a3" : "#845ec2";
@@ -176,7 +177,7 @@ export default function Analytics() {
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
               <Tooltip />
-              <Bar dataKey="value" radius={[6, 6, 0, 0]}>
+              <Bar dataKey="value" radius={[6, 6, 0, 0]} animationDuration={ANIM_DURATION}>
                 {contentTypeData.map((_, i) => (
                   <Cell key={`cell-ctype-${i}`} fill={COLORS[i % COLORS.length]} />
                 ))}
@@ -205,7 +206,7 @@ export default function Analytics() {
                 label={{ value: "Conversions", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#666" } }}
               />
               <Tooltip />
-              <Line dataKey="count" stroke="#4b8df8" strokeWidth={2} />
+              <Line dataKey="count" stroke="#ff6b6b" strokeWidth={2} animationDuration={ANIM_DURATION} />
             </LineChart>
           </ResponsiveContainer>
         </ChartBox>
@@ -224,7 +225,7 @@ export default function Analytics() {
                 label={{ value: "Conversions", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#666" } }}
               />
               <Tooltip />
-              <Bar dataKey="value" fill="#ff6b6b" radius={[6, 6, 0, 0]} />
+              <Bar dataKey="value" fill="#ff6b6b" radius={[6, 6, 0, 0]} animationDuration={ANIM_DURATION} />
             </BarChart>
           </ResponsiveContainer>
         </ChartBox>
