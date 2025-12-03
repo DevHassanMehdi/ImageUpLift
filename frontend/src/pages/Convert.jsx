@@ -3,7 +3,6 @@ import { useSearchParams } from 'react-router-dom';
 import UploadDropzone from '../components/UploadDropzone';
 import PreviewPane from '../components/PreviewPane';
 import SettingsPanel from '../components/SettingsPanel';
-import StatsCard from '../components/StatsCard';
 import ImageInsights from '../components/ImageInsights';
 import Toasts from '../components/Toast';
 
@@ -16,8 +15,6 @@ export default function Convert() {
   const [vectorSrc, setVectorSrc] = useState('');
   const [loading, setLoading] = useState(false);
   const [recommending, setRecommending] = useState(false);
-  const [imagesConverted] = useState(0);
-  const [lastTimeSec] = useState(0);
   const [outlineLow, setOutlineLow] = useState(100);
   const [outlineHigh, setOutlineHigh] = useState(200);
   const [metadata, setMetadata] = useState(null);
@@ -224,9 +221,8 @@ export default function Convert() {
           outlineHigh={outlineHigh}
           setOutlineLow={setOutlineLow}
           setOutlineHigh={setOutlineHigh}
-          notify={addToast}
-        />
-        {/* <StatsCard count={imagesConverted} lastTimeSec={lastTimeSec} /> */}
+        notify={addToast}
+      />
         <ImageInsights metadata={metadata} recommendation={recommendation} />
       </div>
       <Toasts toasts={toasts} removeToast={removeToast} />
