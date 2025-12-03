@@ -1,5 +1,6 @@
 # OS / editor
 .DS_Store
+.vscode
 Thumbs.db
 *.swp
 *.swo
@@ -37,6 +38,4 @@ back-end/app/output/
 
 # Databases
 *.sqlite3
-*.db.DS_Store
-__pycache__/
-back-end/app/db/imageuplift.db
+*.db
