@@ -12,6 +12,8 @@ import {
   LineChart,
   Line,
 } from "recharts";
+import AnalyticsSummaryCard from "../components/AnalyticsSummaryCard";
+import AnalyticsChartCard from "../components/AnalyticsChartCard";
 
 const DEFAULT_SUMMARY = {
   total_images: 0,
@@ -91,37 +93,39 @@ export default function Analytics() {
   const outputSizeData = outputSizes.map((i) => ({ name: i.mode, value: i.avg_size }));
 
   const COLORS = ["#4b8df8", "#34c9a3", "#845ec2"];
-  const ANIM_DURATION = 2000; // slightly quicker animations (~0.5s faster)
+  const ANIM_DURATION = 1000;
+  const tooltipProps = {
+    wrapperStyle: { borderRadius: 12, boxShadow: "0 12px 28px rgba(15,23,42,0.12)" },
+    contentStyle: {
+      backgroundColor: "var(--card)",
+      border: "1px solid var(--border)",
+      borderRadius: 12,
+      color: "var(--text)",
+      padding: 12,
+    },
+    labelStyle: { color: "var(--muted)", fontWeight: 700, fontSize: 12 },
+    itemStyle: { color: "var(--text)", fontWeight: 600, fontSize: 13 },
+  };
 
   return (
-    <div style={{ padding: 24 }}>
-      <h1 style={{ marginBottom: 6 }}>Analytics Dashboard</h1>
-      {loading && <p className="muted" style={{ marginTop: 0 }}>Loading live data...</p>}
-      {error && <div className="alert alert-error" style={{ marginBottom: 12 }}>{error}</div>}
-
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(4, 1fr)",
-          gap: 16,
-          marginBottom: 40,
-        }}
-      >
-        <SummaryCard title="Total Images" value={summary.total_images} />
-        <SummaryCard title="Most Used Mode" value={summary.most_used_mode} />
-        <SummaryCard title="Avg Processing Time" value={`${summary.avg_processing_time}s`} />
-        <SummaryCard title="Most Common Type" value={summary.common_image_type} />
+    <div className="analytics-page">
+      <div className="analytics-header">
+        <div>
+          <h1 className="analytics-title">Analytics Dashboard</h1>
+          {loading && <p className="muted analytics-muted">Loading live data...</p>}
+        </div>
+        {error && <div className="alert alert-error">{error}</div>}
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-          gap: 16,
-          marginTop: 12,
-        }}
-      >
-        <ChartBox title="Mode Usage">
+      <div className="analytics-summary-grid">
+        <AnalyticsSummaryCard title="Total Images" value={summary.total_images} />
+        <AnalyticsSummaryCard title="Most Used Mode" value={summary.most_used_mode} />
+        <AnalyticsSummaryCard title="Avg Processing Time" value={`${summary.avg_processing_time}s`} />
+        <AnalyticsSummaryCard title="Most Common Type" value={summary.common_image_type} />
+      </div>
+
+      <div className="analytics-chart-grid">
+        <AnalyticsChartCard title="Mode Usage">
           <ResponsiveContainer width="100%" height={240}>
             <PieChart>
               <Pie data={modeData} outerRadius={70} dataKey="value" label animationDuration={ANIM_DURATION}>
@@ -129,12 +133,12 @@ export default function Analytics() {
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip {...tooltipProps} />
             </PieChart>
           </ResponsiveContainer>
-        </ChartBox>
+        </AnalyticsChartCard>
 
-        <ChartBox title="Time by Mode">
+        <AnalyticsChartCard title="Time by Mode">
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={timeModeData} margin={{ top: 10, right: 0, left: 0, bottom: 0 }} barCategoryGap={20}>
               <XAxis dataKey="name" tick={{ fontSize: 10 }} />
@@ -142,7 +146,7 @@ export default function Analytics() {
                 tick={{ fontSize: 10 }}
                 label={{ value: "Seconds", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#666" } }}
               />
-              <Tooltip />
+              <Tooltip {...tooltipProps} cursor={{ fill: "rgba(14,165,233,0.08)" }} />
               <Bar dataKey="value" barSize={40} radius={[6, 6, 0, 0]} animationDuration={ANIM_DURATION}>
                 {timeModeData.map((entry, i) => {
                   const m = (entry.name || "").toLowerCase();
@@ -152,14 +156,14 @@ export default function Analytics() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </ChartBox>
+        </AnalyticsChartCard>
 
-        <ChartBox title="Avg Output Size by Mode (MB)">
+        <AnalyticsChartCard title="Avg Output Size by Mode (MB)">
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={outputSizeData}>
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
+              <Tooltip {...tooltipProps} cursor={{ fill: "rgba(14,165,233,0.08)" }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} animationDuration={ANIM_DURATION}>
                 {outputSizeData.map((entry, i) => {
                   const m = (entry.name || "").toLowerCase();
@@ -169,14 +173,14 @@ export default function Analytics() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </ChartBox>
+        </AnalyticsChartCard>
 
-        <ChartBox title="Content Types (AI)">
+        <AnalyticsChartCard title="Content Types (AI)">
           <ResponsiveContainer width="100%" height={240}>
             <BarChart data={contentTypeData}>
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-              <Tooltip />
+              <Tooltip {...tooltipProps} cursor={{ fill: "rgba(14,165,233,0.08)" }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} animationDuration={ANIM_DURATION}>
                 {contentTypeData.map((_, i) => (
                   <Cell key={`cell-ctype-${i}`} fill={COLORS[i % COLORS.length]} />
@@ -184,18 +188,11 @@ export default function Analytics() {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </ChartBox>
+        </AnalyticsChartCard>
       </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: 16,
-          marginTop: 20,
-        }}
-      >
-        <ChartBox title="Daily Trend">
+      <div className="analytics-trend-grid">
+        <AnalyticsChartCard title="Daily Trend">
           <ResponsiveContainer width="100%" height={250}>
             <LineChart data={dailyTrend}>
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
@@ -205,13 +202,13 @@ export default function Analytics() {
                 domain={[0, "dataMax + 1"]}
                 label={{ value: "Conversions", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#666" } }}
               />
-              <Tooltip />
+              <Tooltip {...tooltipProps} />
               <Line dataKey="count" stroke="#ff6b6b" strokeWidth={2} animationDuration={ANIM_DURATION} />
             </LineChart>
           </ResponsiveContainer>
-        </ChartBox>
+        </AnalyticsChartCard>
 
-        <ChartBox title="Peak Hours">
+        <AnalyticsChartCard title="Peak Hours">
           <ResponsiveContainer width="100%" height={250}>
             <BarChart data={peakHourData}>
               <XAxis
@@ -224,45 +221,12 @@ export default function Analytics() {
                 tick={{ fontSize: 10 }}
                 label={{ value: "Conversions", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#666" } }}
               />
-              <Tooltip />
+              <Tooltip {...tooltipProps} cursor={{ fill: "rgba(14,165,233,0.08)" }} />
               <Bar dataKey="value" fill="#ff6b6b" radius={[6, 6, 0, 0]} animationDuration={ANIM_DURATION} />
             </BarChart>
           </ResponsiveContainer>
-        </ChartBox>
+        </AnalyticsChartCard>
       </div>
-    </div>
-  );
-}
-
-function SummaryCard({ title, value }) {
-  return (
-    <div
-      style={{
-        background: "white",
-        padding: 16,
-        borderRadius: 10,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
-      }}
-    >
-      <p style={{ fontSize: 13, marginBottom: 6, color: "#666" }}>{title}</p>
-      <h3 style={{ margin: 0 }}>{value}</h3>
-    </div>
-  );
-}
-
-function ChartBox({ title, children, width }) {
-  return (
-    <div
-      style={{
-        width: width || "100%",
-        background: "white",
-        padding: 16,
-        borderRadius: 10,
-        boxShadow: "0 1px 4px rgba(0,0,0,0.1)",
-      }}
-    >
-      <h3 style={{ marginBottom: 10, fontSize: 14 }}>{title}</h3>
-      {children}
     </div>
   );
 }

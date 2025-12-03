@@ -36,10 +36,17 @@ export default function ImageInsights({ metadata, recommendation }) {
 
   return (
     <div className="card insights-card">
-      <div className="insights-header">
-        <h4>Image Insights</h4>
-        <span className="pill">{mode ? mode[0].toUpperCase() + mode.slice(1) : "N/A"}</span>
-      </div>
+     <div className="insights-header">
+  <h4>Image Insights</h4>
+
+  <span
+    className={`pill insights-pill ${
+      mode ? mode.toLowerCase() : "none"
+    }`}
+  >
+    {mode ? mode[0].toUpperCase() + mode.slice(1) : "N/A"}
+  </span>
+</div>
 
       <div className="insights-grid">
         <InsightRow label="Type" value={`${type || "-"}${conf ? ` · ${conf}` : ""}`} />
