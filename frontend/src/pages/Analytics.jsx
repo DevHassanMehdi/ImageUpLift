@@ -93,7 +93,19 @@ export default function Analytics() {
   const outputSizeData = outputSizes.map((i) => ({ name: i.mode, value: i.avg_size }));
 
   const COLORS = ["#4b8df8", "#34c9a3", "#845ec2"];
-  const ANIM_DURATION = 1000; // slightly quicker animations (~0.5s faster)
+  const ANIM_DURATION = 1000;
+  const tooltipProps = {
+    wrapperStyle: { borderRadius: 12, boxShadow: "0 12px 28px rgba(15,23,42,0.12)" },
+    contentStyle: {
+      backgroundColor: "var(--card)",
+      border: "1px solid var(--border)",
+      borderRadius: 12,
+      color: "var(--text)",
+      padding: 12,
+    },
+    labelStyle: { color: "var(--muted)", fontWeight: 700, fontSize: 12 },
+    itemStyle: { color: "var(--text)", fontWeight: 600, fontSize: 13 },
+  };
 
   return (
     <div className="analytics-page">
@@ -121,7 +133,7 @@ export default function Analytics() {
                   <Cell key={i} fill={COLORS[i % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
+              <Tooltip {...tooltipProps} />
             </PieChart>
           </ResponsiveContainer>
         </AnalyticsChartCard>
@@ -134,7 +146,7 @@ export default function Analytics() {
                 tick={{ fontSize: 10 }}
                 label={{ value: "Seconds", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#666" } }}
               />
-              <Tooltip />
+              <Tooltip {...tooltipProps} cursor={{ fill: "rgba(14,165,233,0.08)" }} />
               <Bar dataKey="value" barSize={40} radius={[6, 6, 0, 0]} animationDuration={ANIM_DURATION}>
                 {timeModeData.map((entry, i) => {
                   const m = (entry.name || "").toLowerCase();
@@ -151,7 +163,7 @@ export default function Analytics() {
             <BarChart data={outputSizeData}>
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip />
+              <Tooltip {...tooltipProps} cursor={{ fill: "rgba(14,165,233,0.08)" }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} animationDuration={ANIM_DURATION}>
                 {outputSizeData.map((entry, i) => {
                   const m = (entry.name || "").toLowerCase();
@@ -168,7 +180,7 @@ export default function Analytics() {
             <BarChart data={contentTypeData}>
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-              <Tooltip />
+              <Tooltip {...tooltipProps} cursor={{ fill: "rgba(14,165,233,0.08)" }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} animationDuration={ANIM_DURATION}>
                 {contentTypeData.map((_, i) => (
                   <Cell key={`cell-ctype-${i}`} fill={COLORS[i % COLORS.length]} />
@@ -190,7 +202,7 @@ export default function Analytics() {
                 domain={[0, "dataMax + 1"]}
                 label={{ value: "Conversions", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#666" } }}
               />
-              <Tooltip />
+              <Tooltip {...tooltipProps} />
               <Line dataKey="count" stroke="#ff6b6b" strokeWidth={2} animationDuration={ANIM_DURATION} />
             </LineChart>
           </ResponsiveContainer>
@@ -209,7 +221,7 @@ export default function Analytics() {
                 tick={{ fontSize: 10 }}
                 label={{ value: "Conversions", angle: -90, position: "insideLeft", style: { fontSize: 11, fill: "#666" } }}
               />
-              <Tooltip />
+              <Tooltip {...tooltipProps} cursor={{ fill: "rgba(14,165,233,0.08)" }} />
               <Bar dataKey="value" fill="#ff6b6b" radius={[6, 6, 0, 0]} animationDuration={ANIM_DURATION} />
             </BarChart>
           </ResponsiveContainer>
