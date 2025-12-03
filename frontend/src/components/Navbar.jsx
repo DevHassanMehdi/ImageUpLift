@@ -5,7 +5,10 @@ import logo from '../logo.svg'; // ⬅️ adjust to './logo.svg' if Navbar.jsx i
 export default function Navbar() {
   const [theme, setTheme] = useState(() => {
     if (typeof window === 'undefined') return 'light';
-    return localStorage.getItem('imageuplift-theme') || 'light';
+    const stored = localStorage.getItem('imageuplift-theme');
+    if (stored) return stored;
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    return prefersDark ? 'dark' : 'light';
   });
 
   useEffect(() => {
