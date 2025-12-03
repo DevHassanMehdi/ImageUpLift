@@ -311,7 +311,7 @@ def list_conversions(
     limit: int = 50,
     mode: Optional[str] = None,
     page: int = 1,
-    page_size: int = 10,
+    page_size: int = 8,
     db: Session = Depends(get_db),
 ):
     """

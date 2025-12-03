@@ -6,7 +6,7 @@ import GalleryFilterBar from '../components/GalleryFilterBar';
 const API_BASE =
   process.env.REACT_APP_API_BASE_URL ||
   (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5001');
-const PAGE_SIZE = 10;
+const PAGE_SIZE = 8;
 
 export default function Gallery() {
   const [items, setItems] = useState([]);
