@@ -319,7 +319,14 @@ export default function SettingsPanel({
         disabled={!canConvert || busy || !file}
         onClick={handleConvert}
       >
-        {loading ? 'Converting…' : recommending ? 'Getting recommendation…' : 'Convert'}
+      <span className={`convert-status ${loading ? "loading" : recommending ? "recommending" : "idle"}`}>
+  {loading
+    ? "Converting…"
+    : recommending
+    ? "Getting recommendation…"
+    : "Convert"}
+</span>
+
       </button>
     </aside>
   );

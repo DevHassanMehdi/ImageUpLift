@@ -186,3 +186,727 @@ body{
   border:none;background:transparent;color:#475569;
   font-size:16px;cursor:pointer;padding:4px;
 }
+
+/* navbar css */
+
+
+
+/* --------------------------------------------------
+   GLOBAL THEME BACKGROUND
+-------------------------------------------------- */
+
+html[data-theme="light"] body {
+  background-color: #f8fafc; /* soft gray */
+  color: #0f172a;
+}
+
+html[data-theme="dark"] body {
+  background-color: #020617; /* near-black indigo */
+  color: #e5e7eb;
+}
+
+/* --------------------------------------------------
+   NAVBAR BASE
+-------------------------------------------------- */
+
+.nav {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  backdrop-filter: blur(12px);
+  transition:
+    background-color 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease,
+    color 0.25s ease;
+}
+
+/* LIGHT MODE NAVBAR */
+
+.nav-light {
+  background: linear-gradient(
+    135deg,
+    #d7eaff 100%,   /* richer sky blue */
+    #e0e4ff 50%,  /* indigo-tinted white */
+    #e9ddff 100%  /* soft pastel purple */
+  );
+  border-bottom: 1px solid #b8c7ff;
+  color: #0f172a;
+}
+
+
+
+/* DARK MODE NAVBAR — matches the logo colors */
+.nav-dark {
+  background: linear-gradient(
+    135deg,
+    #020617 0%,
+    #0f172a 35%,
+    #6366f1 70%,
+    #8b5cf6 100%
+  );
+  border-bottom: 1px solid rgba(15, 23, 42, 0.85);
+  color: #f9fafb;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.6);
+}
+
+.nav-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+/* --------------------------------------------------
+   LEFT SIDE: BRAND (logo + image/uplift)
+-------------------------------------------------- */
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  text-decoration: none;
+}
+
+.brand-logo {
+  width: 34px;
+  height: 34px;
+}
+
+.brand-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+  text-transform: lowercase;
+}
+
+.brand-line-top {
+  font-size: 0.7rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: inherit;
+  opacity: 0.85;
+}
+
+.brand-line-bottom {
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: inherit;
+}
+
+/* --------------------------------------------------
+   CENTER: NAVIGATION LINKS
+-------------------------------------------------- */
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.nav-center {
+  flex: 1 1 auto;
+  justify-content: center;
+}
+
+/* Hide center links on very small screens */
+@media (max-width: 640px) {
+  .nav-center {
+    display: none;
+  }
+}
+
+.nav-link {
+  position: relative;
+  font-size: 0.95rem;
+  text-decoration: none;
+  color: #1e293b; /* darker slate for readability */
+  opacity: 0.9;
+  padding-bottom: 0.2rem;
+  transition:
+    color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+/* underline animation */
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -0.3rem;
+  width: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  transition: width 0.18s ease;
+}
+
+/* hover (light mode) */
+.nav-light .nav-link:hover {
+  opacity: 1;
+  color: #4f46e5;
+}
+
+/* hover (dark mode) */
+.nav-dark .nav-link:hover {
+  opacity: 1;
+  color: #e5e7eb;
+}
+
+/* underline expands on hover/active */
+.nav-link:hover::after,
+.nav-link-active::after {
+  width: 100%;
+}
+
+/* active link color — light mode */
+.nav-light .nav-link-active {
+  opacity: 1;
+  color: #4f46e5;
+}
+
+/* active link — dark mode */
+.nav-dark .nav-link-active {
+  opacity: 1;
+  color: #e0e7ff;
+}
+
+/* --------------------------------------------------
+   RIGHT SIDE: THEME TOGGLE
+-------------------------------------------------- */
+
+.nav-right {
+  display: flex;
+  justify-content: flex-end;
+  min-width: 170px;
+}
+
+/* base button */
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.9rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  line-height: 1;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.05s ease;
+}
+
+/* DAY MODE BUTTON STYLE – soft yellow pill so it's visible */
+.nav-light .theme-toggle {
+  background: #fef9c3;         /* yellow-100 */
+  border: 1px solid #facc15;   /* yellow-400 */
+  color: #854d0e;              /* amber-800 text */
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18);
+}
+
+.nav-light .theme-toggle:hover {
+  background: #fef3c7;         /* yellow-100 a bit deeper */
+  border-color: #eab308;       /* yellow-500 */
+}
+
+/* DARK MODE */
+.nav-dark .theme-toggle {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(51, 65, 85, 0.9);
+  color: #e5e7eb;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.7);
+}
+
+.nav-dark .theme-toggle:hover {
+  background: rgba(15, 23, 42, 0.95);
+}
+
+.theme-toggle:active {
+  transform: translateY(1px);
+}
+
+.theme-toggle-icon {
+  font-size: 1.15rem;
+}
+
+/* TRACK (pill background) */
+.theme-toggle-track {
+  position: relative;
+  width: 44px;
+  height: 22px;
+  border-radius: 999px;
+}
+
+/* track colors per theme */
+.nav-light .theme-toggle-track {
+  background: #facc15; /* solid yellow bar */
+}
+
+.nav-dark .theme-toggle-track {
+  background: rgba(30, 64, 175, 0.8);
+}
+
+/* THUMB (circle) */
+.theme-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.5);
+  transition: transform 0.18s ease;
+}
+
+/* move thumb to right (dark mode) */
+.theme-toggle-thumb-right {
+  transform: translateX(20px);
+}
+
+.theme-toggle-label {
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+}
+
+.nav-light .brand-line-top,
+.nav-light .brand-line-bottom {
+  color: #000000;
+}
+
+.nav-light .nav-link {
+  color: #000000 !important;
+  opacity: 1;
+}
+
+
+.nav-light .nav-link-active {
+  color: #000000 !important;
+  opacity: 1;
+}
+
+
+
+/* elment style for night mode */
+
+
+
+/* =========================================================
+   DARK MODE OVERRIDES FOR WHOLE APP
+   (Triggered when <html data-theme="dark">)
+   Keep navbar styles as they are – this is for the rest.
+========================================================= */
+
+/* ---- Global text + subtle scrollbars ---- */
+
+html[data-theme="dark"] body {
+  background-color: #020617;
+  color: #e5e7eb;
+}
+
+html[data-theme="dark"] ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-track {
+  background: #020617;
+}
+html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: #1f2937;
+  border-radius: 999px;
+}
+
+/* ---- Cards / panels / main surfaces ---- */
+/* Many components use inline background:white,
+   so we force override with !important so night mode works. */
+
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .compare-card,
+html[data-theme="dark"] .insights-card,
+html[data-theme="dark"] .gallery-card {
+  background: #020617 !important;
+  border: 1px solid #1f2937 !important;
+  box-shadow: 0 18px 45px rgba(15, 23, 42, 0.95) !important;
+  color: #e5e7eb !important;
+}
+
+/* Stats / summary cards labels */
+html[data-theme="dark"] .card .muted,
+html[data-theme="dark"] .muted {
+  color: #9ca3af !important;
+}
+
+/* Section separators */
+html[data-theme="dark"] .hr {
+  border-top-color: #1f2937;
+}
+
+/* ---- Sidebar / Settings panel ---- */
+
+html[data-theme="dark"] .side {
+  background: #020617;
+  border-radius: 12px;
+  border: 1px solid #111827;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.9);
+}
+
+/* Section headers/badges */
+
+html[data-theme="dark"] .badge {
+  background: rgba(31, 41, 55, 0.85);
+  color: #e5e7eb;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* ---- Buttons ---- */
+
+html[data-theme="dark"] .btn {
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+/* Primary action (Convert, Download) */
+html[data-theme="dark"] .btn-primary {
+  background: linear-gradient(135deg, #4b8df8, #845ec2);
+  border: 1px solid #93c5fd;
+  color: #0b1120;
+  box-shadow: 0 10px 30px rgba(37, 99, 235, 0.6);
+}
+html[data-theme="dark"] .btn-primary:hover {
+  filter: brightness(1.06);
+}
+
+/* Secondary buttons */
+html[data-theme="dark"] .btn-secondary {
+  background: #020617;
+  border: 1px solid #374151;
+  color: #e5e7eb;
+}
+html[data-theme="dark"] .btn-secondary:hover {
+  background: #030712;
+}
+
+/* Ghost-style pills (mode tabs, etc.) */
+html[data-theme="dark"] .btn-ghost {
+  background: #020617;
+  border: 1px solid transparent;
+  color: #e5e7eb;
+}
+html[data-theme="dark"] .btn-ghost:hover {
+  background: #030712;
+}
+
+/* Active ghost (selected mode) */
+html[data-theme="dark"] .btn-ghost.active {
+  background: rgba(37, 99, 235, 0.18);
+  border-color: #4b8df8;
+  color: #e0f2fe;
+}
+
+/* Tiny buttons (×, +/- etc.) */
+html[data-theme="dark"] .tiny {
+  background: #020617;
+  border: 1px solid #4b5563;
+  color: #e5e7eb;
+}
+html[data-theme="dark"] .tiny:hover {
+  background: #111827;
+}
+
+/* ---- Pills / tags / chips ---- */
+
+html[data-theme="dark"] .pill {
+  background: rgba(15, 23, 42, 0.9);
+  color: #e5e7eb;
+  border-radius: 999px;
+}
+
+html[data-theme="dark"] .pill-ghost {
+  background: rgba(15, 23, 42, 0.6);
+  color: #9ca3af;
+}
+
+/* Gallery mime pill override */
+html[data-theme="dark"] .gallery-card .pill-ghost {
+  background: rgba(30, 64, 175, 0.3);
+  color: #c7d2fe;
+}
+
+/* ---- Inputs: sliders, selects, etc. ---- */
+
+/* Range sliders */
+html[data-theme="dark"] .slider {
+  accent-color: #a5b4ff;
+  background: linear-gradient(
+    90deg,
+    rgba(55, 65, 81, 0.9),
+    rgba(30, 64, 175, 0.9)
+  );
+  height: 4px;
+  border-radius: 999px;
+}
+
+/* WebKit thumb / track */
+html[data-theme="dark"] .slider::-webkit-slider-runnable-track {
+  background: transparent;
+  height: 4px;
+}
+html[data-theme="dark"] .slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  border: 2px solid #4b8df8;
+  margin-top: -5px;
+}
+
+/* Firefox */
+html[data-theme="dark"] .slider::-moz-range-track {
+  background: transparent;
+  height: 4px;
+}
+html[data-theme="dark"] .slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #e5e7eb;
+  border: 2px solid #4b8df8;
+}
+
+/* Dropdowns (Gallery filter, etc.) */
+html[data-theme="dark"] select {
+  background: #020617 !important;
+  color: #e5e7eb !important;
+  border: 1px solid #4b5563 !important;
+}
+
+/* ---- Upload dropzone ---- */
+
+html[data-theme="dark"] .drop {
+  background: radial-gradient(circle at top, #0b1120, #020617 60%);
+  border: 1px dashed #394151;
+  color: #e5e7eb;
+}
+html[data-theme="dark"] .drop.dragover {
+  border-color: #4b8df8;
+  background: radial-gradient(circle at top, #111827, #020617 60%);
+}
+
+/* ---- Preview / compare pane ---- */
+
+html[data-theme="dark"] .compare-card {
+  background: #020617 !important;
+}
+
+html[data-theme="dark"] .compare-canvas {
+  background: radial-gradient(circle at center, #020617 0, #020617 30%, #020617 100%);
+  border-radius: 12px;
+}
+
+/* Divider line & handle */
+html[data-theme="dark"] .divider-line {
+  background: rgba(249, 250, 251, 0.08);
+}
+html[data-theme="dark"] .divider-handle {
+  background: #e5e7eb;
+  border: 1px solid #111827;
+}
+
+/* Loading overlay */
+html[data-theme="dark"] .loading-sheet {
+  background: rgba(15, 23, 42, 0.88);
+}
+
+/* ---- Toasts / alerts ---- */
+
+html[data-theme="dark"] .toast-stack {
+  color: #e5e7eb;
+}
+
+html[data-theme="dark"] .toast {
+  background: #020617;
+  border: 1px solid #1f2937;
+  box-shadow: 0 14px 40px rgba(15, 23, 42, 0.95);
+}
+
+/* Toast types */
+html[data-theme="dark"] .toast-info {
+  border-color: #38bdf8;
+}
+html[data-theme="dark"] .toast-success {
+  border-color: #22c55e;
+}
+html[data-theme="dark"] .toast-error {
+  border-color: #f97373;
+}
+
+/* Alerts (like analytics error) */
+html[data-theme="dark"] .alert {
+  background: #111827;
+  border: 1px solid #7f1d1d;
+  color: #fecaca;
+}
+
+/* ---- Image insights swatches ---- */
+
+html[data-theme="dark"] .swatch {
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.9);
+}
+
+/* ---- Gallery grid background ---- */
+
+html[data-theme="dark"] .gallery-thumb {
+  background: #020617 !important;
+}
+
+/* ---- Misc small text overrides ---- */
+
+html[data-theme="dark"] h1,
+html[data-theme="dark"] h2,
+html[data-theme="dark"] h3,
+html[data-theme="dark"] h4 {
+  color: #e5e7eb;
+}
+
+
+/* Image Insights values in dark mode */
+html[data-theme="dark"] .insight-row strong,
+html[data-theme="dark"] .insight-block strong,
+html[data-theme="dark"] .kv-pair strong {
+  color: #f1f5f9 !important; /* light slate */
+}
+
+html[data-theme="dark"] .insight-row .muted,
+html[data-theme="dark"] .insight-block .muted {
+  color: #9ca3af !important; /* gray~400 */
+}
+
+
+/* =========================================================
+   INSIGHTS HEADER PILL — MODERN STYLING
+========================================================= */
+
+.insights-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Base pill design */
+.insights-pill {
+  padding: 4px 10px;
+  font-size: 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: capitalize;
+  border: 1px solid transparent;
+  transition: background 0.25s ease, color 0.25s ease, border 0.25s ease;
+}
+
+/* ----- DAY MODE ----- */
+html[data-theme="light"] .insights-pill {
+  background: #eef2ff;
+  color: #3730a3; /* indigo-700 */
+  border-color: #c7d2fe;
+}
+
+/* ----- NIGHT MODE ----- */
+html[data-theme="dark"] .insights-pill {
+  background: rgba(99, 102, 241, 0.25);
+  border-color: rgba(129, 140, 248, 0.45);
+  color: #e0e7ff !important;
+}
+
+/* ----------------------------------------------
+   OPTIONAL: Different pill colors per mode type
+---------------------------------------------- */
+
+/* Vectorize */
+.insights-pill.vectorize {
+  background: linear-gradient(90deg, #4b8df8, #845ec2);
+  color: #ffffff;
+}
+
+/* Outline */
+.insights-pill.outline {
+  background: #34c9a3;
+  color: #0f172a;
+}
+
+/* Enhance */
+.insights-pill.enhance {
+  background: #facc15;
+  color: #7c2d12;
+}
+
+/* No mode (N/A) */
+.insights-pill.none {
+  background: #cbd5e1;
+  color: #334155;
+}
+
+
+/* =========================================================
+   CONVERT BUTTON STATUS — Modern Theme Aware UI
+========================================================= */
+
+.convert-status {
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  transition: color 0.25s ease;
+}
+
+/* ---- DAY MODE ---- */
+html[data-theme="light"] .convert-status.idle {
+  color: #0f172a; /* dark slate */
+}
+
+html[data-theme="light"] .convert-status.loading {
+  color: #4b8df8; /* sky blue */
+}
+
+html[data-theme="light"] .convert-status.recommending {
+  color: #845ec2; /* purple */
+}
+
+/* ---- NIGHT MODE ---- */
+html[data-theme="dark"] .convert-status.idle {
+  color: #f8fafc !important; /* white-ish */
+}
+
+html[data-theme="dark"] .convert-status.loading {
+  color: #93c5fd !important; /* soft blue */
+}
+
+html[data-theme="dark"] .convert-status.recommending {
+  color: #c7b5ff !important; /* lavender */
+}
+
+
+/* Stronger toast / popup text in dark mode */
+html[data-theme="dark"] .toast,
+html[data-theme="dark"] .toast span,
+html[data-theme="dark"] .toast button {
+  color: #ffffff !important;
+}
+
+/* Also make alert text full white in dark mode */
+html[data-theme="dark"] .alert,
+html[data-theme="dark"] .alert span,
+html[data-theme="dark"] .alert p {
+  color: #ffffff !important;
+}

@@ -167,7 +167,7 @@ export default function Convert() {
           setOutlineHigh={setOutlineHigh}
           notify={addToast}
         />
-        <StatsCard count={imagesConverted} lastTimeSec={lastTimeSec} />
+        {/* <StatsCard count={imagesConverted} lastTimeSec={lastTimeSec} /> */}
         <ImageInsights metadata={metadata} recommendation={recommendation} />
       </div>
       <Toasts toasts={toasts} removeToast={removeToast} />
