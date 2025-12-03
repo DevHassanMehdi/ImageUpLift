@@ -14,6 +14,7 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
   const [dimsOriginal, setDimsOriginal] = useState(null);
   const [dimsVector, setDimsVector] = useState(null);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const zoomTimer = useRef(null);
 
   useEffect(() => {
     setZoom(1);
@@ -142,12 +143,26 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
     setOffset({ x: 0, y: 0 });
   };
 
+  const stopZoomHold = () => {
+    if (zoomTimer.current) {
+      clearInterval(zoomTimer.current);
+      zoomTimer.current = null;
+    }
+  };
+
+  const startZoomHold = (delta) => {
+    stopZoomHold();
+    const center = centerPoint();
+    applyZoom(delta, center);
+    zoomTimer.current = setInterval(() => applyZoom(delta, center), 130);
+  };
+
   const layerStyle = (clipLeft, clipRight) => ({
     position: "absolute",
     inset: 0,
     overflow: "hidden",
     clipPath: `inset(0 ${clipRight * 100}% 0 ${clipLeft * 100}%)`,
-    background: "#f8fafc",
+    background: "var(--canvas-layer-bg)",
   });
 
   const styledImage = (isOriginal) => {
@@ -178,6 +193,9 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
     </div>
   );
 
+  // Clean up zoom hold on unmount
+  useEffect(() => stopZoomHold, []);
+
   return (
     <div className="card compare-card">
       <div className="compare-head">
@@ -185,13 +203,35 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
         <div style={{ flex: 1 }} />
         <div className="pill pill-ghost">Output</div>
         <div className="compare-actions">
-          <button className="tiny" onClick={() => applyZoom(1, centerPoint())} aria-label="Zoom in">
+          <button
+            className="tiny"
+            onClick={() => applyZoom(1, centerPoint())}
+            aria-label="Zoom in"
+            onMouseDown={() => startZoomHold(1)}
+            onMouseUp={stopZoomHold}
+            onMouseLeave={stopZoomHold}
+            onTouchStart={() => startZoomHold(1)}
+            onTouchEnd={stopZoomHold}
+          >
             +
           </button>
-          <button className="tiny" onClick={() => applyZoom(-1, centerPoint())} aria-label="Zoom out">
+          <button
+            className="tiny"
+            onClick={() => applyZoom(-1, centerPoint())}
+            aria-label="Zoom out"
+            onMouseDown={() => startZoomHold(-1)}
+            onMouseUp={stopZoomHold}
+            onMouseLeave={stopZoomHold}
+            onTouchStart={() => startZoomHold(-1)}
+            onTouchEnd={stopZoomHold}
+          >
             -
           </button>
-          <button className="tiny" onClick={resetView} aria-label="Reset view">
+          <button
+            className="tiny"
+            onClick={resetView}
+            aria-label="Reset view"
+          >
             Reset
           </button>
         </div>
