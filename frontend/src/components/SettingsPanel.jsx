@@ -1,3 +1,6 @@
+import { useEffect, useRef } from 'react';
+import { updateConvertCache } from '../state/convertCache';
+
 const API_BASE =
   process.env.REACT_APP_API_BASE_URL ||
   (process.env.NODE_ENV === 'production' ? '' : 'http://localhost:5001');
@@ -17,6 +20,9 @@ export default function SettingsPanel({
   setOutlineHigh,
   notify
 }) {
+  const mountedRef = useRef(true);
+  useEffect(() => () => { mountedRef.current = false; }, []);
+
   const set = (k, v) => setSettings({ ...settings, [k]: v });
 
   const handleConvert = async () => {
@@ -27,7 +33,8 @@ export default function SettingsPanel({
     }
 
     try {
-      setLoading(true);
+      if (mountedRef.current) setLoading(true);
+      updateConvertCache({ isConverting: true, vectorSrc: '' });
       console.log("Sending conversion request to:", `${API_BASE}/conversion/convert`);
 
       const fd = new FormData();
@@ -78,7 +85,8 @@ export default function SettingsPanel({
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
         console.log("Image received:", url);
-        setVectorSrc(url);
+        if (mountedRef.current) setVectorSrc(url);
+        updateConvertCache({ vectorSrc: url });
         notify?.('Conversion completed', 'success');
       } else {
         const json = await response.json();
@@ -88,7 +96,8 @@ export default function SettingsPanel({
       console.error('Conversion failed:', error);
       notify?.('Conversion failed. Check console for details.', 'error');
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
+      updateConvertCache({ isConverting: false });
     }
   };
 
