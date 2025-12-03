@@ -31,7 +31,7 @@ export default function UploadDropzone({ onSelect }){
         hidden
         onChange={e => onFiles(e.target.files)}
       />
-      <div style={{fontSize:48,opacity:.35}}>📁</div>
+      <div style={{fontSize:36,opacity:.35}}>📁</div>
       <h3>Drop your image here or click to upload</h3>
       <p>Supports PNG, JPG, JPEG, WEBP (Max ~10MB)</p>
     </div>

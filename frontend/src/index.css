@@ -17,6 +17,7 @@
   --canvas-layer-bg:#f8fafc;
   --divider-line:var(--primary-500);
   --divider-shadow:0 0 0 0 rgba(0,0,0,0);
+  --divider-glow:rgba(14,165,233,.28);
   --divider-handle-bg:#ffffff;
   --divider-handle-border:rgba(14,165,233,.5);
   --toast-bg:var(--card);
@@ -149,7 +150,7 @@ textarea {
 /* Dropzone */
 .drop{
   border:2px dashed var(--primary-300);
-  border-radius:14px; padding:32px; text-align:center; background:white;
+  border-radius:14px; padding:12px 12px; text-align:center; background:white;
   transition:.15s; cursor:pointer;
 }
 .drop.dragover{background:var(--primary-50); border-color:var(--primary-500)}
@@ -216,11 +217,24 @@ textarea {
 .divider-line{
   position:absolute;top:0;bottom:0;width:3px;
   background:var(--divider-line);
+  border-radius:999px;
   cursor:ew-resize;
+  box-shadow:var(--divider-shadow);
   transition:
     background var(--theme-transition),
     border-color var(--theme-transition),
     box-shadow var(--theme-transition);
+}
+.divider-line::before{
+  content:"";
+  position:absolute;
+  top:-2px;bottom:-2px;left:50%;
+  width:18px;
+  transform:translateX(-50%);
+  background:linear-gradient(90deg, transparent, var(--divider-glow), transparent);
+  filter:blur(4px);
+  opacity:.65;
+  pointer-events:none;
 }
 .divider-handle{
   position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
@@ -471,7 +485,10 @@ html[data-theme="light"] body {
 html[data-theme="light"] {
   --canvas-layer-bg:#f8fafc;
   --divider-line:var(--primary-500);
-  --divider-shadow:0 0 0 0 rgba(0,0,0,0);
+  --divider-shadow:
+    0 0 0 1px rgba(14,165,233,.15),
+    0 0 8px rgba(14,165,233,.22);
+  --divider-glow:rgba(14,165,233,.3);
   --divider-handle-bg:#ffffff;
   --divider-handle-border:rgba(14,165,233,.5);
   --toast-bg:var(--card);
@@ -500,7 +517,10 @@ html[data-theme="dark"] body {
 html[data-theme="dark"] {
   --canvas-layer-bg:#020617;
   --divider-line:#93c5fd;
-  --divider-shadow:0 0 0 0 rgba(0,0,0,0);
+  --divider-shadow:
+    0 0 0 1px rgba(147,197,253,.25),
+    0 0 10px rgba(79,70,229,.24);
+  --divider-glow:rgba(147,197,253,.32);
   --divider-handle-bg:#0f172a;
   --divider-handle-border:#1f2937;
   --toast-bg:#0b1120;
