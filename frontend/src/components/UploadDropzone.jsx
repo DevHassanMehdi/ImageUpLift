@@ -1,17 +1,50 @@
 import { useRef, useState } from 'react';
 
+const MAX_PIXELS = 1024 * 1024; // 1,048,576 pixels (~1024x1024)
+
 export default function UploadDropzone({ onSelect }){
   const inputRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
+  const [error, setError] = useState('');
 
-  const onFiles = files => {
+  const validateDimensions = (file) =>
+    new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        const totalPixels = img.width * img.height;
+        if (totalPixels > MAX_PIXELS) {
+          reject({ width: img.width, height: img.height, totalPixels });
+        } else {
+          resolve();
+        }
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("Unable to read image."));
+      };
+      img.src = url;
+    });
+
+  const onFiles = async files => {
     if(!files || !files[0]) return;
     const file = files[0];
     if(!/image\/(png|jpe?g|webp)/i.test(file.type)){
-      alert('Please upload an image (png, jpg, jpeg, webp).');
+      setError('Please upload an image (png, jpg, jpeg, webp).');
       return;
     }
-    onSelect(file);
+    try {
+      await validateDimensions(file);
+      setError('');
+      onSelect(file);
+    } catch (err) {
+      if (err?.width && err?.height) {
+        setError(`Image too large (${err.width}x${err.height}). Limit is ${MAX_PIXELS.toLocaleString()} pixels (~1024x1024).`);
+      } else {
+        setError(err.message || 'Unable to process image.');
+      }
+    }
   };
 
   return (
@@ -33,7 +66,8 @@ export default function UploadDropzone({ onSelect }){
       />
       <div style={{fontSize:36,opacity:.35}}>📁</div>
       <h3>Drop your image here or click to upload</h3>
-      <p>Supports PNG, JPG, JPEG, WEBP (Max ~10MB)</p>
+      <p>Supports PNG, JPG, JPEG, WEBP (Max ~1MP)</p>
+      {error && <p className="muted" style={{ color: '#e11d48', marginTop: 8 }}>{error}</p>}
     </div>
   );
 }

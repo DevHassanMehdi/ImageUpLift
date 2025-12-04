@@ -6,8 +6,11 @@ export default function GalleryGrid({ items, apiBase, onOpen, onDelete }) {
   return (
     <div className="gallery-grid">
       {items.map((item) => {
-        const hasThumb = item.output_size_bytes && item.output_size_bytes > 0 && item.output_mime;
-        const thumbUrl = hasThumb ? `${apiBase}/conversion/output/${item.id}` : "/logo.svg";
+        const mode = (item?.mode || '').toLowerCase();
+        const useOutput = mode === 'vectorize' || mode === 'outline';
+        const thumbUrl = item
+          ? `${apiBase}/conversion/${useOutput ? 'output' : 'thumb'}/${item.id}`
+          : "/logo.svg";
         const badge = item.mode ? item.mode.toUpperCase() : "OUTPUT";
         const mime = item.output_mime || "";
         return (
