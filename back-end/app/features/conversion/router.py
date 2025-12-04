@@ -12,6 +12,7 @@ import torch
 import subprocess
 from sqlalchemy.orm import Session
 from sqlalchemy import desc, func
+from PIL import Image
 
 from app.features.helpers.recommend_settings import extract_image_metadata, recommend_conversion
 from app.db import get_db
@@ -22,17 +23,32 @@ router = APIRouter(prefix="/conversion", tags=["Conversion"])
 
 
 def _ensure_image(db: Session, filename: str, blob: bytes, size_bytes: int):
-  """
-  Create an image row for the upload.
-  """
-  image = models.Image(
-      original_filename=filename or "upload",
-      size_bytes=size_bytes,
-      original_blob=blob,
-  )
-  db.add(image)
-  db.flush()
-  return image
+    """
+    Create an image row for the upload.
+    """
+    image = models.Image(
+        original_filename=filename or "upload",
+        size_bytes=size_bytes,
+        original_blob=blob,
+    )
+    db.add(image)
+    db.flush()
+    return image
+
+
+def _generate_thumbnail(output_bytes: Optional[bytes], max_size: int = 256) -> Optional[bytes]:
+    if not output_bytes:
+        return None
+    try:
+        with Image.open(io.BytesIO(output_bytes)) as img:
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+            img.thumbnail((max_size, max_size))
+            buffer = io.BytesIO()
+            img.save(buffer, format="WEBP", quality=70, method=6)
+            return buffer.getvalue()
+    except Exception:
+        return None
 
 
 @router.get("/")
@@ -129,6 +145,7 @@ async def convert_image(
     output_path = None
     output_bytes = None
     output_mime = None
+    thumb_bytes = None
     device = "gpu" if torch.cuda.is_available() else "cpu"
     failure_reason = None
 
@@ -261,6 +278,13 @@ async def convert_image(
         # Read output into memory
         if output_path:
             output_bytes = output_path.read_bytes()
+        if output_bytes:
+            if outputType.lower() in {"vectorize", "outline"}:
+                thumb_bytes = output_bytes
+            else:
+                thumb_bytes = _generate_thumbnail(output_bytes)
+        else:
+            thumb_bytes = None
 
     except Exception as e:
         failure_reason = str(e)
@@ -279,6 +303,7 @@ async def convert_image(
             output_mime=output_mime,
             output_size_bytes=output_size,
             output_blob=output_bytes,
+            output_thumb_blob=thumb_bytes,
         )
         try:
             db.add(conv_entry)
@@ -344,6 +369,7 @@ def list_conversions(
             "chosen_params": r.chosen_params,
             "output_size_bytes": r.output_size_bytes,
             "output_mime": r.output_mime,
+            "has_thumb": bool(r.output_thumb_blob),
         }
         for r in rows
     ]
@@ -384,6 +410,19 @@ def get_conversion_output(conversion_id: int, db: Session = Depends(get_db)):
     safe_name = conv.image_name or "output"
     headers = {"Content-Disposition": f'inline; filename="{safe_name}.{ext}"'}
     return StreamingResponse(io.BytesIO(conv.output_blob), media_type=mime, headers=headers)
+
+
+@router.get("/thumb/{conversion_id}")
+def get_conversion_thumb(conversion_id: int, db: Session = Depends(get_db)):
+    conv = db.query(models.Conversion).filter(models.Conversion.id == conversion_id).first()
+    if not conv:
+        return JSONResponse(status_code=404, content={"error": "Conversion not found"})
+    if conv.output_thumb_blob:
+        return StreamingResponse(io.BytesIO(conv.output_thumb_blob), media_type="image/webp")
+    if conv.output_blob:
+        mime = conv.output_mime or ("image/svg+xml" if conv.mode in {"vectorize", "outline"} else "image/png")
+        return StreamingResponse(io.BytesIO(conv.output_blob), media_type=mime)
+    return JSONResponse(status_code=404, content={"error": "Thumbnail not available"})
 
 
 @router.get("/original/{image_id}")
