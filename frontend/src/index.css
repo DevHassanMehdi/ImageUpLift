@@ -106,6 +106,20 @@ textarea {
     transform .18s ease,
     background var(--theme-transition);
   font-size:14px;line-height:1.1;
+  position:relative;
+}
+.btn:hover:not(:disabled){
+  transform:translateY(-1px);
+  box-shadow:0 12px 24px rgba(15, 23, 42, 0.12);
+}
+.btn:active:not(:disabled){
+  transform:translateY(0);
+  box-shadow:0 8px 18px rgba(15, 23, 42, 0.1);
+}
+.btn:disabled{
+  opacity:0.6;
+  cursor:not-allowed;
+  box-shadow:none;
 }
 .btn-primary{background:var(--primary-500);color:white}
 .btn-primary:hover{background:var(--primary-600)}
