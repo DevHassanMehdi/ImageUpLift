@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { updateConvertCache } from '../state/convertCache';
+import { getDefaultSettings, updateConvertCache } from '../state/convertCache';
 
 const API_BASE =
   process.env.REACT_APP_API_BASE_URL ||
@@ -24,6 +24,27 @@ export default function SettingsPanel({
   useEffect(() => () => { mountedRef.current = false; }, []);
 
   const set = (k, v) => setSettings({ ...settings, [k]: v });
+  const resetSettings = () => {
+    if (settings.outputType === 'vectorize') {
+      const defaults = getDefaultSettings();
+      setSettings((prev) => ({
+        ...prev,
+        hierarchical: defaults.hierarchical,
+        filterSpeckle: defaults.filterSpeckle,
+        colorPrecision: defaults.colorPrecision,
+        gradientStep: defaults.gradientStep,
+        preset: defaults.preset,
+        mode: defaults.mode,
+        cornerThreshold: defaults.cornerThreshold,
+        segmentLength: defaults.segmentLength,
+        spliceThreshold: defaults.spliceThreshold,
+      }));
+      updateConvertCache({ settings: { ...settings, ...defaults } });
+    } else if (settings.outputType === 'outline') {
+      setOutlineLow(100);
+      setOutlineHigh(200);
+    }
+  };
 
   const handleConvert = async () => {
     if (!canConvert || loading || recommending) return;
@@ -322,23 +343,34 @@ export default function SettingsPanel({
         </div>
       )}
 
-      <div className="hr" />
+  <div className="hr" />
 
-      <button
-        className="btn btn-primary"
-        style={{ width: '100%' }}
-        disabled={!canConvert || busy || !file}
-        onClick={handleConvert}
-      >
-      <span className={`convert-status ${loading ? "loading" : recommending ? "recommending" : "idle"}`}>
-  {loading
-    ? "Converting…"
-    : recommending
-    ? "Getting recommendation…"
-    : "Convert"}
-</span>
-
-      </button>
+      <div style={{ display: 'flex', gap: 12 }}>
+        <button
+          className="btn btn-primary"
+          style={{ flex: 1 }}
+          disabled={!canConvert || busy || !file}
+          onClick={handleConvert}
+        >
+          <span className={`convert-status ${loading ? "loading" : recommending ? "recommending" : "idle"}`}>
+            {loading
+              ? "Converting…"
+              : recommending
+              ? "Getting recommendation…"
+              : "Convert"}
+          </span>
+        </button>
+        {settings.outputType !== 'enhance' && (
+          <button
+            className="btn btn-secondary"
+            style={{ minWidth: 140 }}
+            onClick={resetSettings}
+            disabled={recommending || loading}
+          >
+            Reset Defaults
+          </button>
+        )}
+      </div>
     </aside>
   );
 }

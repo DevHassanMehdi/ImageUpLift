@@ -185,8 +185,23 @@ export default function Convert() {
           throw new Error(`Failed to load conversion ${cid}`);
         }
         const json = await res.json();
+        let galleryFile = file;
         if (json.original_url) {
-          setOriginalSrc(`${API_BASE}${json.original_url}`);
+          const origUrl = `${API_BASE}${json.original_url}`;
+          setOriginalSrc(origUrl);
+          try {
+            const blobRes = await fetch(origUrl);
+            if (!blobRes.ok) {
+              throw new Error(`Failed to fetch original blob for ${cid}`);
+            }
+            const blob = await blobRes.blob();
+            const name = json.image_name || file?.name || 'gallery-image.png';
+            galleryFile = new File([blob], name, { type: blob.type || 'application/octet-stream' });
+            setFile(galleryFile);
+          } catch (blobErr) {
+            console.error('Failed to load original blob', blobErr);
+            addToast('Original preview failed to load fully', 'error');
+          }
         }
         if (json.output_url) {
           setVectorSrc(`${API_BASE}${json.output_url}`);
@@ -210,7 +225,7 @@ export default function Convert() {
           if (params.high !== undefined) setOutlineHigh(Number(params.high));
         }
         setLoadedConversionId(cid);
-        setHasAnalyzed(true);
+        setHasAnalyzed(Boolean(galleryFile));
         addToast('Loaded conversion from gallery', 'info', 2000);
       } catch (err) {
         console.error('Failed to load conversion', err);
@@ -236,7 +251,7 @@ export default function Convert() {
             originalSrc={originalSrc}
             vectorSrc={vectorSrc}
             processing={loading}
-            onClear={handleClear} // �o. pass clear function to PreviewPane
+            onClear={handleClear}
           />
         </div>
       </div>
