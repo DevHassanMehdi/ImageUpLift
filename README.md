@@ -27,3 +27,9 @@ AI-powered image conversion and enhancement suite with a modern web UI. Upload a
 ## Links
 - Backend docs: [`back-end/README.md`](back-end/README.md)
 - Frontend docs: [`frontend/README.md`](frontend/README.md)
+
+## Screens
+![Convert page](design/convert-page.png)
+![Gallery page](design/gallery-page.png)
+![Analytics page](design/analytics-page.png)
+![Analytics page (Night)](design/analytics-page-night.png)
