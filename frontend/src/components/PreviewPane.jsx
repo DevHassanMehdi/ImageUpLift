@@ -13,6 +13,8 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
   const offsetStart = useRef({ x: 0, y: 0 });
   const [dimsOriginal, setDimsOriginal] = useState(null);
   const [dimsVector, setDimsVector] = useState(null);
+  const [loadingOriginal, setLoadingOriginal] = useState(false);
+  const [loadingVector, setLoadingVector] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const zoomTimer = useRef(null);
 
@@ -23,17 +25,23 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
   }, [originalSrc, vectorSrc]);
 
   useEffect(() => {
-    const loadDims = (src, setter) => {
+    const loadDims = (src, setter, setLoading) => {
       if (!src) {
         setter(null);
+        setLoading(false);
         return;
       }
+      setLoading(true);
       const img = new Image();
-      img.onload = () => setter({ width: img.naturalWidth, height: img.naturalHeight });
+      img.onload = () => {
+        setter({ width: img.naturalWidth, height: img.naturalHeight });
+        setLoading(false);
+      };
+      img.onerror = () => setLoading(false);
       img.src = src;
     };
-    loadDims(originalSrc, setDimsOriginal);
-    loadDims(vectorSrc, setDimsVector);
+    loadDims(originalSrc, setDimsOriginal, setLoadingOriginal);
+    loadDims(vectorSrc, setDimsVector, setLoadingVector);
   }, [originalSrc, vectorSrc]);
 
   const baseDims = dimsOriginal || dimsVector;
@@ -109,6 +117,10 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
 
   const handlePointerDown = (e) => {
     if (!canvasRef.current) return;
+    if (e.pointerType === "touch") {
+      e.preventDefault();
+    }
+    canvasRef.current.setPointerCapture?.(e.pointerId);
     setIsPanning(true);
     panStart.current = { x: e.clientX, y: e.clientY };
     offsetStart.current = offset;
@@ -116,10 +128,17 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
 
   const handleDividerDown = (e) => {
     e.stopPropagation();
+    if (e.pointerType === "touch") {
+      e.preventDefault();
+    }
+    canvasRef.current?.setPointerCapture?.(e.pointerId);
     setIsDividing(true);
   };
 
   const handlePointerMove = (e) => {
+    if (e.pointerType === "touch") {
+      e.preventDefault();
+    }
     if (isDividing && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
       const ratio = clamp((e.clientX - rect.left) / rect.width, 0.08, 0.92);
@@ -133,7 +152,8 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
     setOffset({ x: offsetStart.current.x + dx, y: offsetStart.current.y + dy });
   };
 
-  const handlePointerUp = () => {
+  const handlePointerUp = (e) => {
+    canvasRef.current?.releasePointerCapture?.(e.pointerId);
     setIsPanning(false);
     setIsDividing(false);
   };
@@ -241,10 +261,10 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
         ref={canvasRef}
         className="compare-canvas"
         onWheel={handleWheel}
-        onMouseDown={handlePointerDown}
-        onMouseMove={handlePointerMove}
-        onMouseUp={handlePointerUp}
-        onMouseLeave={handlePointerUp}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
       >
         {!hasOriginal && !hasVector && <div className="preview-empty">Upload and convert to compare</div>}
 
@@ -260,7 +280,7 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
             <div
               className="divider-line"
               style={{ left: `${divider * 100}%` }}
-              onMouseDown={handleDividerDown}
+              onPointerDown={handleDividerDown}
             >
               <div className="divider-handle" />
             </div>
@@ -270,10 +290,16 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
         {!showCompare && hasOriginal && renderSingle(originalSrc, true)}
         {!showCompare && !hasOriginal && hasVector && renderSingle(vectorSrc, false)}
 
-        {processing && (
+        {(processing || loadingOriginal || loadingVector) && (
           <div className="loading-sheet">
             <div className="spinner" />
-            <div className="muted">Processing…</div>
+            <div className="muted">
+              {processing
+                ? "Processing…"
+                : loadingVector || (showCompare && loadingOriginal)
+                ? "Loading output…"
+                : "Loading preview…"}
+            </div>
           </div>
         )}
       </div>

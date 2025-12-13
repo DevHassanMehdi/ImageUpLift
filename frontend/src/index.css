@@ -223,6 +223,7 @@ textarea {
   background:radial-gradient(circle at 25% 25%, #f8fafc 0, #f8fafc 35%, #eef2f7 100%);
   overflow:hidden;
   user-select:none;
+  touch-action:none;
 }
 .preview-empty{
   position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
