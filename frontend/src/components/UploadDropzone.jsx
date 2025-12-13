@@ -1,28 +1,61 @@
 import { useRef, useState } from 'react';
 
-const MAX_PIXELS = 1024 * 1024; // 1,048,576 pixels (~1024x1024)
+const TARGET_PIXELS = 1024 * 1024; // ~1MP target footprint
 
 export default function UploadDropzone({ onSelect }){
   const inputRef = useRef(null);
   const [dragOver, setDragOver] = useState(false);
+  const [status, setStatus] = useState('');
   const [error, setError] = useState('');
 
-  const validateDimensions = (file) =>
+  const normalizeImage = (file) =>
     new Promise((resolve, reject) => {
       const url = URL.createObjectURL(file);
       const img = new Image();
       img.onload = () => {
         URL.revokeObjectURL(url);
         const totalPixels = img.width * img.height;
-        if (totalPixels > MAX_PIXELS) {
-          reject({ width: img.width, height: img.height, totalPixels });
-        } else {
-          resolve();
+        if (totalPixels <= TARGET_PIXELS) {
+          resolve({ file, resized: false });
+          return;
         }
+        const scale = Math.sqrt(TARGET_PIXELS / totalPixels);
+        const targetWidth = Math.max(1, Math.round(img.width * scale));
+        const targetHeight = Math.max(1, Math.round(img.height * scale));
+        const canvas = document.createElement('canvas');
+        canvas.width = targetWidth;
+        canvas.height = targetHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Unable to process image.'));
+          return;
+        }
+        ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error('Failed to compress image.'));
+              return;
+            }
+            const name = file.name.replace(/\.[^/.]+$/, '') || 'upload';
+            const processed = new File([blob], `${name}_optimized.webp`, {
+              type: 'image/webp',
+              lastModified: Date.now(),
+            });
+            resolve({
+              file: processed,
+              resized: true,
+              original: { width: img.width, height: img.height },
+              resizedDims: { width: targetWidth, height: targetHeight },
+            });
+          },
+          'image/webp',
+          0.8
+        );
       };
       img.onerror = () => {
         URL.revokeObjectURL(url);
-        reject(new Error("Unable to read image."));
+        reject(new Error('Unable to read image.'));
       };
       img.src = url;
     });
@@ -35,15 +68,19 @@ export default function UploadDropzone({ onSelect }){
       return;
     }
     try {
-      await validateDimensions(file);
+      const result = await normalizeImage(file);
       setError('');
-      onSelect(file);
-    } catch (err) {
-      if (err?.width && err?.height) {
-        setError(`Image too large (${err.width}x${err.height}). Limit is ${MAX_PIXELS.toLocaleString()} pixels (~1024x1024).`);
+      if (result.resized) {
+        setStatus(
+          `Large photo compressed from ${result.original.width}×${result.original.height} to ${result.resizedDims.width}×${result.resizedDims.height}.`
+        );
       } else {
-        setError(err.message || 'Unable to process image.');
+        setStatus('');
       }
+      onSelect(result.file);
+    } catch (err) {
+      setStatus('');
+      setError(err.message || 'Unable to process image.');
     }
   };
 
@@ -66,8 +103,9 @@ export default function UploadDropzone({ onSelect }){
       />
       <div style={{fontSize:36,opacity:.35}}>📁</div>
       <h3>Drop your image here or click to upload</h3>
-      <p>Supports PNG, JPG, JPEG, WEBP (Max ~1MP)</p>
+      <p>Supports PNG, JPG, JPEG, WEBP (auto-compresses large photos)</p>
       {error && <p className="muted" style={{ color: '#e11d48', marginTop: 8 }}>{error}</p>}
+      {!error && status && <p className="muted" style={{ color: '#0f766e', marginTop: 8 }}>{status}</p>}
     </div>
   );
 }
