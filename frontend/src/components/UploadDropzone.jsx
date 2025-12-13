@@ -65,6 +65,7 @@ export default function UploadDropzone({ onSelect }){
     const file = files[0];
     if(!/image\/(png|jpe?g|webp)/i.test(file.type)){
       setError('Please upload an image (png, jpg, jpeg, webp).');
+      setError('Please upload an image (png, jpg, jpeg, webp).');
       return;
     }
     try {
