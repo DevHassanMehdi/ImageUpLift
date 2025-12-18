@@ -11,6 +11,9 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
   const [isDividing, setIsDividing] = useState(false);
   const panStart = useRef({ x: 0, y: 0 });
   const offsetStart = useRef({ x: 0, y: 0 });
+  const activePointers = useRef(new Map());
+  const pinchStartDistance = useRef(null);
+  const pinchStartZoom = useRef(1);
   const [dimsOriginal, setDimsOriginal] = useState(null);
   const [dimsVector, setDimsVector] = useState(null);
   const [loadingOriginal, setLoadingOriginal] = useState(false);
@@ -82,26 +85,29 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
     };
   };
 
-  const applyZoom = (delta, evt) => {
+  const zoomAtPoint = (next, clientX, clientY) => {
     const rect = canvasRef.current?.getBoundingClientRect();
     const minZoom = 0.25;
     const maxZoom = 8;
-    const step = 0.12;
-    const next = clamp(zoom + delta * step, minZoom, maxZoom);
-
-    if (!rect || next === zoom) {
-      setZoom(next);
+    const clamped = clamp(next, minZoom, maxZoom);
+    if (!rect || clamped === zoom) {
+      setZoom(clamped);
       return;
     }
-
-    const cx = (evt.clientX ?? rect.left + rect.width / 2) - rect.left - rect.width / 2;
-    const cy = (evt.clientY ?? rect.top + rect.height / 2) - rect.top - rect.height / 2;
-    const scale = next / zoom;
+    const cx = (clientX ?? rect.left + rect.width / 2) - rect.left - rect.width / 2;
+    const cy = (clientY ?? rect.top + rect.height / 2) - rect.top - rect.height / 2;
+    const scale = clamped / zoom;
     setOffset((prev) => ({
       x: prev.x - cx * (scale - 1),
       y: prev.y - cy * (scale - 1),
     }));
-    setZoom(next);
+    setZoom(clamped);
+  };
+
+  const applyZoom = (delta, evt) => {
+    const step = 0.12;
+    const next = zoom + delta * step;
+    zoomAtPoint(next, evt?.clientX, evt?.clientY);
   };
 
   const handleWheel = (e) => {
@@ -115,15 +121,34 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
     applyZoom(direction, e);
   };
 
+  const updatePinchBaseline = () => {
+    const pointers = Array.from(activePointers.current.values());
+    if (pointers.length >= 2) {
+      const [p1, p2] = pointers;
+      const dx = p1.x - p2.x;
+      const dy = p1.y - p2.y;
+      pinchStartDistance.current = Math.hypot(dx, dy);
+      pinchStartZoom.current = zoom;
+    } else {
+      pinchStartDistance.current = null;
+    }
+  };
+
   const handlePointerDown = (e) => {
     if (!canvasRef.current) return;
     if (e.pointerType === "touch") {
       e.preventDefault();
     }
     canvasRef.current.setPointerCapture?.(e.pointerId);
-    setIsPanning(true);
-    panStart.current = { x: e.clientX, y: e.clientY };
-    offsetStart.current = offset;
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    updatePinchBaseline();
+    if (activePointers.current.size === 1) {
+      setIsPanning(true);
+      panStart.current = { x: e.clientX, y: e.clientY };
+      offsetStart.current = offset;
+    } else {
+      setIsPanning(false);
+    }
   };
 
   const handleDividerDown = (e) => {
@@ -132,6 +157,7 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
       e.preventDefault();
     }
     canvasRef.current?.setPointerCapture?.(e.pointerId);
+    activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     setIsDividing(true);
   };
 
@@ -139,10 +165,30 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
     if (e.pointerType === "touch") {
       e.preventDefault();
     }
+
+    if (activePointers.current.has(e.pointerId)) {
+      activePointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    }
+
     if (isDividing && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
       const ratio = clamp((e.clientX - rect.left) / rect.width, 0.08, 0.92);
       setDivider(ratio);
+      return;
+    }
+
+    if (activePointers.current.size >= 2 && pinchStartDistance.current) {
+      const [p1, p2] = Array.from(activePointers.current.values()).slice(0, 2);
+      const dx = p1.x - p2.x;
+      const dy = p1.y - p2.y;
+      const distance = Math.hypot(dx, dy);
+      if (distance > 0) {
+        const scale = distance / pinchStartDistance.current;
+        const nextZoom = pinchStartZoom.current * scale;
+        const centerX = (p1.x + p2.x) / 2;
+        const centerY = (p1.y + p2.y) / 2;
+        zoomAtPoint(nextZoom, centerX, centerY);
+      }
       return;
     }
 
@@ -154,7 +200,18 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
 
   const handlePointerUp = (e) => {
     canvasRef.current?.releasePointerCapture?.(e.pointerId);
-    setIsPanning(false);
+    activePointers.current.delete(e.pointerId);
+    if (activePointers.current.size >= 2) {
+      updatePinchBaseline();
+    } else if (activePointers.current.size === 1) {
+      const remaining = Array.from(activePointers.current.values())[0];
+      panStart.current = { x: remaining.x, y: remaining.y };
+      offsetStart.current = offset;
+      setIsPanning(true);
+    } else {
+      pinchStartDistance.current = null;
+      setIsPanning(false);
+    }
     setIsDividing(false);
   };
 
@@ -264,7 +321,7 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={handlePointerUp}
+        onPointerCancel={handlePointerUp}
       >
         {!hasOriginal && !hasVector && <div className="preview-empty">Upload and convert to compare</div>}
 
