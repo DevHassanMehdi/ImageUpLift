@@ -54,6 +54,12 @@ fi
 # Python deps
 echo "Installing Python dependencies..."
 pip install --upgrade pip
+
+# Pre-install numba/llvmlite via conda-forge (prebuilt binaries). The pip
+# resolver pulls numba/llvmlite transitively via realesrgan->facexlib->filterpy,
+# but no prebuilt llvmlite wheel matches this platform's reported tag, so pip
+# tries (and fails) to build llvmlite from source, which needs a full LLVM/CMake setup.
+conda install -y -c conda-forge numba
 pip install torch==1.13.1 torchvision==0.14.1 torchaudio==0.13.1 --extra-index-url https://download.pytorch.org/whl/cu117
 
 pip install basicsr==1.4.2 realesrgan opencv-python-headless "numpy>=1.24,<1.27" scikit-image==0.21.0 "scipy>=1.10,<1.11"
