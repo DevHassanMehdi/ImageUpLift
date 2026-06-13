@@ -110,16 +110,22 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
     zoomAtPoint(next, evt?.clientX, evt?.clientY);
   };
 
-  const handleWheel = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.nativeEvent) {
-      e.nativeEvent.stopPropagation();
-      e.nativeEvent.preventDefault();
-    }
-    const direction = e.deltaY < 0 ? 1 : -1;
-    applyZoom(direction, e);
-  };
+  // React's onWheel handler is registered as a passive listener, so
+  // preventDefault() there can't stop page scroll. Attach a native,
+  // non-passive listener directly to the preview element instead, so
+  // scrolling over it zooms without scrolling the page, while scrolling
+  // outside it still scrolls the page normally.
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    const onWheel = (e) => {
+      e.preventDefault();
+      const direction = e.deltaY < 0 ? 1 : -1;
+      applyZoom(direction, e);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [zoom]);
 
   const updatePinchBaseline = () => {
     const pointers = Array.from(activePointers.current.values());
@@ -317,7 +323,6 @@ export default function PreviewPane({ originalSrc, vectorSrc, processing, onClea
       <div
         ref={canvasRef}
         className="compare-canvas"
-        onWheel={handleWheel}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
